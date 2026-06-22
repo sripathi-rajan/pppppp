@@ -238,7 +238,7 @@ class AgentEngine:
     def _ollama_supports_native_tools(self, active_model: str) -> bool:
         """Some Ollama multimodal models accept images but reject OpenAI tool calls."""
         model = (active_model or "").lower()
-        no_tool_markers = ("vision", "llava")
+        no_tool_markers = ("vision", "llava", "gemma3")
         return not any(marker in model for marker in no_tool_markers)
 
     def _model_supports_vision(self, active_model: str) -> bool:
