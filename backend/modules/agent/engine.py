@@ -155,6 +155,7 @@ class AgentEngine:
         """Initialize Ollama via OpenAI-compatible API."""
         ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
         ollama_model = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
+        ollama_vision_model = os.getenv("OLLAMA_VISION_MODEL", "llama3.2-vision:latest")
 
         try:
             from openai import OpenAI
@@ -163,8 +164,9 @@ class AgentEngine:
             client.models.list()
             self.ollama_client = client
             self.ollama_model = ollama_model
+            self.ollama_vision_model = ollama_vision_model
             self.ollama_available = True
-            logger.info("[Agent] ✅ Ollama ready — model: %s at %s", ollama_model, ollama_base_url)
+            logger.info("[Agent] ✅ Ollama ready — text: %s, vision: %s at %s", ollama_model, ollama_vision_model, ollama_base_url)
         except Exception as e:
             logger.warning("[Agent] Ollama not available (%s). Trying Gemini...", e)
 
@@ -228,20 +230,20 @@ class AgentEngine:
 
     def _active_model_label(self) -> str:
         if self.ollama_available:
-            return f"ollama/{self.ollama_model}"
+            return f"ollama/{self.ollama_model} (vision: {self.ollama_vision_model})"
         if self.gemini_available:
             return "gemini-2.0-flash"
         return "keyword-fallback"
 
-    def _ollama_supports_native_tools(self) -> bool:
+    def _ollama_supports_native_tools(self, active_model: str) -> bool:
         """Some Ollama multimodal models accept images but reject OpenAI tool calls."""
-        model = (self.ollama_model or "").lower()
+        model = (active_model or "").lower()
         no_tool_markers = ("vision", "llava")
         return not any(marker in model for marker in no_tool_markers)
 
-    def _model_supports_vision(self) -> bool:
+    def _model_supports_vision(self, active_model: str) -> bool:
         """Check if the current Ollama model has vision capabilities."""
-        model = (self.ollama_model or "").lower()
+        model = (active_model or "").lower()
         vision_markers = ("vision", "llava")
         return any(marker in model for marker in vision_markers)
 
@@ -449,6 +451,7 @@ class AgentEngine:
         image_mime: str = "image/jpeg",
     ) -> Dict[str, Any]:
         tools_used = []
+        active_model = self.ollama_vision_model if image_base64 else self.ollama_model
 
         expanded_text = self._expand_follow_up_user_text(user_text, history)
         enriched_text = self._enrich_with_gps(expanded_text, gps)
@@ -462,7 +465,7 @@ class AgentEngine:
             or self._is_traffic_query(user_text, history)
             or self._is_traffic_query(expanded_text, history)
         )
-        native_tools = use_tools and self._ollama_supports_native_tools()
+        native_tools = use_tools and self._ollama_supports_native_tools(active_model)
 
         openai_tools = self._build_openai_tools() if native_tools else None
         
@@ -470,7 +473,7 @@ class AgentEngine:
 
         # Qwen3 models default to "thinking mode" which wraps output in <think> tags.
         # The OpenAI-compatible API strips these, causing empty responses. Disable it.
-        if "qwen3" in (self.ollama_model or "").lower():
+        if "qwen3" in (active_model or "").lower():
             system_prompt_to_use += "\n\n/no_think"
 
         if use_tools and not native_tools and not image_base64:
@@ -509,7 +512,7 @@ class AgentEngine:
         try:
             for iteration in range(self.MAX_TOOL_ITERATIONS):
                 create_kwargs: Dict[str, Any] = {
-                    "model": self.ollama_model,
+                    "model": active_model,
                     "messages": messages,
                     "temperature": 0.1,
                 }
@@ -624,7 +627,7 @@ class AgentEngine:
                     ),
                 })
                 response = self.ollama_client.chat.completions.create(
-                    model=self.ollama_model,
+                    model=active_model,
                     messages=messages,
                     temperature=0.1,
                 )
@@ -653,7 +656,7 @@ class AgentEngine:
                 "response": final_text,
                 "tools_used": tools_used,
                 "agent_powered": True,
-                "model": f"ollama/{self.ollama_model}",
+                "model": f"ollama/{active_model}",
             }
 
         except Exception as e:
