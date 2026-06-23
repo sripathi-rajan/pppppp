@@ -154,7 +154,7 @@ class AgentEngine:
     def _init_ollama(self):
         """Initialize Ollama via OpenAI-compatible API."""
         ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
-        ollama_model = os.getenv("OLLAMA_MODEL", "gemma3:27b")
+        ollama_model = os.getenv("OLLAMA_MODEL", "gemma2:9b")
         ollama_vision_model = os.getenv("OLLAMA_VISION_MODEL", "llama3.2-vision:latest")
 
         try:
