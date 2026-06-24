@@ -208,6 +208,21 @@ class AgentEngine:
             if conversational:
                 return conversational
 
+            # Deterministic fast-path for broad queries (bypass LLM synthesis)
+            words = clean_text.split()
+            if hasattr(self.tool_executor, "_is_broad_query") and self.tool_executor._is_broad_query(words):
+                result = self.tool_executor.execute("search_rules", {"keywords": words, "state": "ALL"}, gps)
+                if isinstance(result, dict) and result.get("prebuilt_response"):
+                    final_text = self._sanitize_response(result["prebuilt_response"])
+                    final_text += "\n\n> [!NOTE]\n> This is informational only. Consult official sources or a legal professional for official advice."
+                    return {
+                        "status": "ok",
+                        "response": final_text,
+                        "tools_used": [{"tool": "search_rules", "params": {"keywords": words, "state": "ALL"}, "result": result}],
+                        "agent_powered": True,
+                        "model": self._active_model_label()
+                    }
+
         history = conversation_history or []
 
         # Route image requests to Gemini if Ollama lacks vision capabilities
