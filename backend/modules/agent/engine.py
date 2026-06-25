@@ -213,8 +213,16 @@ class AgentEngine:
             words = [w for w in clean_text.split() if w not in stops]
             if hasattr(self.tool_executor, "_is_broad_query") and self.tool_executor._is_broad_query(words):
                 result = self.tool_executor.execute("search_rules", {"keywords": words, "state": "ALL"}, gps)
-                if isinstance(result, dict) and result.get("prebuilt_response"):
-                    final_text = self._sanitize_response(result["prebuilt_response"])
+                if isinstance(result, dict) and result.get("broad_overview"):
+                    intro = "Here are the basic traffic rules every driver should know:\n\n"
+                    blocks = []
+                    for r in result.get("rules", []):
+                        title = r.get("title") or "Traffic Rule"
+                        section = r.get("section")
+                        desc = r.get("description") or ""
+                        header = f"📜 **{title}**" + (f" (Section {section})" if section else "")
+                        blocks.append(f"{header}\n{desc}")
+                    final_text = intro + "\n\n".join(blocks)
                     final_text += "\n\n> [!NOTE]\n> This is informational only. Consult official sources or a legal professional for official advice."
                     return {
                         "status": "ok",
