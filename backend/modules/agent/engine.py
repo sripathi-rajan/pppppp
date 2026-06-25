@@ -209,7 +209,8 @@ class AgentEngine:
                 return conversational
 
             # Deterministic fast-path for broad queries (bypass LLM synthesis)
-            words = clean_text.split()
+            stops = {"what", "is", "the", "fine", "for", "in", "my", "a", "an", "of", "on", "at", "about", "me", "to", "show", "give", "tell"}
+            words = [w for w in clean_text.split() if w not in stops]
             if hasattr(self.tool_executor, "_is_broad_query") and self.tool_executor._is_broad_query(words):
                 result = self.tool_executor.execute("search_rules", {"keywords": words, "state": "ALL"}, gps)
                 if isinstance(result, dict) and result.get("prebuilt_response"):
