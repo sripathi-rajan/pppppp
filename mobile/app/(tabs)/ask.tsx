@@ -23,6 +23,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useHistory } from '../../hooks/useHistory';
 import { useSettings } from '../../hooks/useSettings';
+import { useAuth } from '../hooks/useAuth';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Location from 'expo-location';
@@ -34,6 +35,7 @@ export default function DriveLegalAssistant() {
   const { q, sid, new: isNew } = useLocalSearchParams<{ q: string, sid: string, new: string }>();
   const { updateSession, sessions } = useHistory();
   const { t, profile, initialized } = useSettings();
+  const { user } = useAuth();
   const router = useRouter();
 
   const makeWelcomeMessage = (): ChatMessage => ({
@@ -230,12 +232,21 @@ export default function DriveLegalAssistant() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
     const imageForApi = pendingImage;
     setPendingImage(null);
+    
+    // Extract primary vehicle type if available
+    let primaryVehicleType = 'ALL';
+    if (user && user.vehicles && user.vehicles.length > 0) {
+      primaryVehicleType = user.vehicles[0].vehicleType;
+    }
+
     await submitQuery(
       text,
       historyForApi,
       imageForApi
         ? { imageBase64: imageForApi.base64, imageMime: imageForApi.mimeType }
-        : undefined
+        : undefined,
+      primaryVehicleType,
+      currentLocation
     );
   };
 

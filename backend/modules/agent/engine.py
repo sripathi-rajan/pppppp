@@ -196,6 +196,8 @@ class AgentEngine:
         user_text: str,
         conversation_history: Optional[List[Dict]] = None,
         gps: Optional[Dict[str, float]] = None,
+        vehicle: Optional[str] = None,
+        location_name: Optional[str] = None,
         image_base64: Optional[str] = None,
         image_mime: str = "image/jpeg",
     ) -> Dict[str, Any]:
@@ -213,7 +215,7 @@ class AgentEngine:
         # Route image requests to Gemini if Ollama lacks vision capabilities
         if image_base64 and self.ollama_available and not self._model_supports_vision(self.ollama_vision_model or self.ollama_model):
             if self.gemini_available:
-                return self._run_gemini(user_text, history, gps, image_base64, image_mime)
+                return self._run_gemini(user_text, history, gps, vehicle, location_name, image_base64, image_mime)
             else:
                 return {
                     "status": "error",
@@ -222,9 +224,9 @@ class AgentEngine:
                 }
 
         if self.ollama_available:
-            return self._run_ollama(user_text, history, gps, image_base64, image_mime)
+            return self._run_ollama(user_text, history, gps, vehicle, location_name, image_base64, image_mime)
         if self.gemini_available:
-            return self._run_gemini(user_text, history, gps, image_base64, image_mime)
+            return self._run_gemini(user_text, history, gps, vehicle, location_name, image_base64, image_mime)
             
         return self._keyword_fallback(user_text, gps)
 
@@ -429,11 +431,13 @@ class AgentEngine:
 
         return None
 
-    def _enrich_with_gps(self, user_text: str, gps: Optional[Dict]) -> str:
+    def _enrich_with_gps(self, user_text: str, gps: Optional[Dict], vehicle: Optional[str], location_name: Optional[str]) -> str:
         # Stop small LLMs from being conversational and asking for missing params
+        loc_str = location_name if location_name else "India ('IN')"
+        veh_str = vehicle if vehicle else "'ALL' or 'LMV'"
         context = (
-            "[System context: Default country is India ('IN'). Default vehicle is 'ALL' or 'LMV'. "
-            "DO NOT ask the user for country or vehicle. Assume India and look up the fine immediately.]"
+            f"[System context: User is located in {loc_str}. User's primary vehicle is {veh_str}. "
+            "DO NOT ask the user for country or vehicle. Assume this location and vehicle and look up the fine immediately.]"
         )
         if gps and self._message_needs_location(user_text):
             context += f" User GPS lat={gps.get('lat')}, lon={gps.get('lon')}."
@@ -448,6 +452,8 @@ class AgentEngine:
         user_text: str,
         history: List[Dict],
         gps: Optional[Dict],
+        vehicle: Optional[str],
+        location_name: Optional[str],
         image_base64: Optional[str] = None,
         image_mime: str = "image/jpeg",
     ) -> Dict[str, Any]:
@@ -455,7 +461,7 @@ class AgentEngine:
         active_model = self.ollama_vision_model if image_base64 else self.ollama_model
 
         expanded_text = self._expand_follow_up_user_text(user_text, history)
-        enriched_text = self._enrich_with_gps(expanded_text, gps)
+        enriched_text = self._enrich_with_gps(expanded_text, gps, vehicle, location_name)
         if image_base64:
             enriched_text = (
                 f"{enriched_text}\n\n"
@@ -745,11 +751,11 @@ class AgentEngine:
     # Gemini Agentic Loop (google-genai SDK) — Cloud Fallback
     # ─────────────────────────────────────────────────────────────────────────
 
-    def _run_gemini(self, user_text: str, history: List[Dict], gps: Optional[Dict], image_base64: Optional[str] = None, image_mime: str = "image/jpeg") -> Dict[str, Any]:
+    def _run_gemini(self, user_text: str, history: List[Dict], gps: Optional[Dict], vehicle: Optional[str], location_name: Optional[str], image_base64: Optional[str] = None, image_mime: str = "image/jpeg") -> Dict[str, Any]:
         tools_used = []
 
         expanded_text = self._expand_follow_up_user_text(user_text, history)
-        enriched_text = self._enrich_with_gps(expanded_text, gps)
+        enriched_text = self._enrich_with_gps(expanded_text, gps, vehicle, location_name)
 
         if image_base64:
             enriched_text = (

@@ -53,7 +53,9 @@ interface UseQueryResult {
   submitQuery: (
     text: string,
     history?: ChatHistoryTurn[],
-    attachment?: { imageBase64?: string; imageMime?: string }
+    attachment?: { imageBase64?: string; imageMime?: string },
+    userVehicle?: string,
+    userLocation?: string
   ) => Promise<void>;
 }
 
@@ -66,7 +68,9 @@ export function useQuery(): UseQueryResult {
   const submitQuery = async (
     text: string,
     history: ChatHistoryTurn[] = [],
-    attachment: { imageBase64?: string; imageMime?: string } = {}
+    attachment: { imageBase64?: string; imageMime?: string } = {},
+    userVehicle?: string,
+    userLocation?: string
   ) => {
     setIsLoading(true);
     setError(null);
@@ -99,6 +103,8 @@ export function useQuery(): UseQueryResult {
           text,
           history,
           gps,
+          vehicle: userVehicle,
+          location_name: userLocation,
           image_base64: attachment.imageBase64,
           image_mime: attachment.imageMime,
         }),

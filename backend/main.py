@@ -97,6 +97,8 @@ agent = AgentEngine(fine_lookup, rules_loader, geofencing)
 class QueryRequest(BaseModel):
     text: str
     gps: Optional[Dict[str, float]] = None
+    vehicle: Optional[str] = None
+    location_name: Optional[str] = None
     image_base64: Optional[str] = None
     image_mime: Optional[str] = "image/jpeg"
     # Conversation history for multi-turn context
@@ -209,6 +211,8 @@ def handle_query(request: QueryRequest = Body(...)):
         user_text=request.text,
         conversation_history=request.history,
         gps=request.gps,
+        vehicle=request.vehicle,
+        location_name=request.location_name,
         image_base64=request.image_base64,
         image_mime=request.image_mime or "image/jpeg",
     )
