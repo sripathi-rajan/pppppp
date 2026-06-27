@@ -430,13 +430,14 @@ class AgentEngine:
         return None
 
     def _enrich_with_gps(self, user_text: str, gps: Optional[Dict]) -> str:
-        if not gps or not self._message_needs_location(user_text):
-            return user_text
-        return (
-            f"{user_text}\n\n"
-            f"[System context: User GPS lat={gps.get('lat')}, lon={gps.get('lon')}. "
-            "Use check_zone only if this question is about location-based restrictions.]"
+        # Stop small LLMs from being conversational and asking for missing params
+        context = (
+            "[System context: Default country is India ('IN'). Default vehicle is 'ALL' or 'LMV'. "
+            "DO NOT ask the user for country or vehicle. Assume India and look up the fine immediately.]"
         )
+        if gps and self._message_needs_location(user_text):
+            context += f" User GPS lat={gps.get('lat')}, lon={gps.get('lon')}."
+        return f"{user_text}\n\n{context}"
 
     # ─────────────────────────────────────────────────────────────────────────
     # Ollama Agentic Loop (OpenAI-compatible API)
