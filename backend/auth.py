@@ -3,7 +3,7 @@ import sqlite3
 import jwt
 import bcrypt
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Literal
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, EmailStr, constr
 
@@ -36,6 +36,8 @@ def init_db():
             createdAt TEXT NOT NULL
         )
     ''')
+    
+    # Existing columns
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN emergencyContact TEXT")
     except sqlite3.OperationalError:
@@ -44,6 +46,25 @@ def init_db():
         cursor.execute("ALTER TABLE users ADD COLUMN emergencyContactName TEXT")
     except sqlite3.OperationalError:
         pass
+        
+    # New columns for Profile Completion
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN gender TEXT NOT NULL DEFAULT 'Prefer not to say'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN authProvider TEXT NOT NULL DEFAULT 'local'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN googleId TEXT")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN vehicleNumber TEXT")
+    except sqlite3.OperationalError:
+        pass
+
     conn.commit()
     conn.close()
 
@@ -69,6 +90,9 @@ class RegisterRequest(BaseModel):
     password: str
     licenseNumber: Optional[str] = None
     vehicles: List[VehicleModel] = []
+    gender: Literal["Male", "Female", "Other", "Prefer not to say"] = "Prefer not to say"
+    vehicleNumber: Optional[str] = None
+    authProvider: Literal["local", "google"] = "local"
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -77,6 +101,15 @@ class LoginRequest(BaseModel):
 class GoogleAuthRequest(BaseModel):
     email: EmailStr
     name: str
+    googleId: Optional[str] = None
+
+class CompleteProfileRequest(BaseModel):
+    name: str
+    email: EmailStr
+    googleId: str
+    phone: str
+    gender: Literal["Male", "Female", "Other", "Prefer not to say"]
+    vehicleNumber: Optional[str] = None
 
 # -- Helpers --
 def get_password_hash(password: str) -> str:
@@ -125,6 +158,12 @@ def register_user(req: RegisterRequest):
         conn.close()
         raise HTTPException(status_code=400, detail="Email already registered")
         
+    # Check phone uniqueness
+    cursor.execute("SELECT id FROM users WHERE phone = ?", (req.phone,))
+    if cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=400, detail="Phone number already registered")
+        
     hashed_password = get_password_hash(req.password)
     created_at = datetime.utcnow().isoformat()
     
@@ -133,16 +172,22 @@ def register_user(req: RegisterRequest):
     
     try:
         cursor.execute("""
-            INSERT INTO users (name, phone, email, password, licenseNumber, vehicles, createdAt)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (req.name, req.phone, req.email, hashed_password, req.licenseNumber, vehicles_json, created_at))
+            INSERT INTO users (name, phone, email, password, licenseNumber, vehicles, createdAt, gender, vehicleNumber, authProvider)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (req.name, req.phone, req.email, hashed_password, req.licenseNumber, vehicles_json, created_at, req.gender, req.vehicleNumber, req.authProvider))
         conn.commit()
     except Exception as e:
         conn.close()
         raise HTTPException(status_code=500, detail="Database error during registration")
         
+    # Log them in immediately
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": req.email}, expires_delta=access_token_expires
+    )
+    
     conn.close()
-    return {"message": "Registration Successful. Please Login."}
+    return {"message": "Registration Successful", "access_token": access_token, "token_type": "bearer"}
 
 @router.post("/login")
 def login_user(req: LoginRequest):
@@ -164,8 +209,6 @@ def login_user(req: LoginRequest):
 
 @router.post("/logout")
 def logout_user():
-    # In a stateless JWT setup, logout is mainly handled client-side by deleting the token.
-    # We return success here.
     return {"message": "Logged out successfully"}
 
 @router.post("/google")
@@ -176,35 +219,63 @@ def google_auth(req: GoogleAuthRequest):
     # Check if user already exists
     cursor.execute("SELECT * FROM users WHERE email = ?", (req.email,))
     user = cursor.fetchone()
+    conn.close()
     
     if not user:
-        # Create user
-        # Generate a random password since they use Google
-        import secrets
-        import string
-        alphabet = string.ascii_letters + string.digits
-        random_password = ''.join(secrets.choice(alphabet) for i in range(20))
-        hashed_password = get_password_hash(random_password)
-        created_at = datetime.utcnow().isoformat()
-        
-        try:
-            cursor.execute("""
-                INSERT INTO users (name, phone, email, password, licenseNumber, vehicles, createdAt)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (req.name, '0000000000', req.email, hashed_password, None, '[]', created_at))
-            conn.commit()
-            
-            cursor.execute("SELECT * FROM users WHERE email = ?", (req.email,))
-            user = cursor.fetchone()
-        except Exception as e:
-            conn.close()
-            raise HTTPException(status_code=500, detail="Database error during Google registration")
-            
-    conn.close()
+        return {
+            "require_profile_completion": True,
+            "googleProfile": {
+                "name": req.name,
+                "email": req.email,
+                "googleId": req.googleId or ""
+            }
+        }
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user['email']}, expires_delta=access_token_expires
+    )
+    
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/complete-profile")
+def complete_profile(req: CompleteProfileRequest):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Final checks before creating
+    cursor.execute("SELECT id FROM users WHERE email = ?", (req.email,))
+    if cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=400, detail="Email already registered")
+        
+    cursor.execute("SELECT id FROM users WHERE phone = ?", (req.phone,))
+    if cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=400, detail="Phone number already registered")
+        
+    import secrets
+    import string
+    alphabet = string.ascii_letters + string.digits
+    random_password = ''.join(secrets.choice(alphabet) for i in range(20))
+    hashed_password = get_password_hash(random_password)
+    created_at = datetime.utcnow().isoformat()
+    
+    try:
+        cursor.execute("""
+            INSERT INTO users (name, phone, email, password, licenseNumber, vehicles, createdAt, gender, vehicleNumber, authProvider, googleId)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (req.name, req.phone, req.email, hashed_password, None, '[]', created_at, req.gender, req.vehicleNumber, 'google', req.googleId))
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=500, detail="Database error during Google registration")
+        
+    conn.close()
+    
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": req.email}, expires_delta=access_token_expires
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
@@ -265,7 +336,7 @@ def update_profile(req: UpdateProfileRequest, email: str = Depends(get_current_u
 def get_user_profile(email: str = Depends(get_current_user_email)):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, name, phone, email, licenseNumber, vehicles, emergencyContact, emergencyContactName, createdAt FROM users WHERE email = ?", (email,))
+    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
     user = cursor.fetchone()
     conn.close()
     
@@ -287,6 +358,13 @@ def get_user_profile(email: str = Depends(get_current_user_email)):
     except Exception:
         pass
         
+    gender = None
+    vehicle_num = None
+    try: gender = user['gender']
+    except Exception: pass
+    try: vehicle_num = user['vehicleNumber']
+    except Exception: pass
+        
     return {
         "_id": user['id'],
         "name": user['name'],
@@ -296,5 +374,7 @@ def get_user_profile(email: str = Depends(get_current_user_email)):
         "vehicles": vehicles,
         "emergencyContact": ec,
         "emergencyContactName": ec_name,
-        "createdAt": user['createdAt']
+        "createdAt": user['createdAt'],
+        "gender": gender,
+        "vehicleNumber": vehicle_num
     }

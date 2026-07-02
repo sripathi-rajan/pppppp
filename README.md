@@ -60,8 +60,8 @@
 
 | Feature | Description |
 |---|---|
-| **Agentic AI** | Local Ollama (with Gemini cloud fallback) autonomously decides which tools to call — fine lookup, rule search, zone check — and synthesizes grounded responses |
-| **Tool Calling** | 4 integrated tools (`lookup_fine`, `lookup_rule`, `check_zone`, `search_rules`) backed by SQLite + JSON data |
+| **Agentic AI** | Local Ollama (with Gemini cloud fallback) autonomously decides which tools to call — fine lookup, rule search, zone check, web search — and synthesizes grounded responses |
+| **Tool Calling** | 5 integrated tools (`lookup_fine`, `lookup_rule`, `check_zone`, `search_rules`, `search_web`) backed by SQLite, JSON data, and live web scraping |
 | **Multi-turn Memory** | Full conversation history passed to the agent for context-aware follow-up queries |
 | **Multi-Country** | Traffic law data for India (16 states), UAE, UK, USA, Singapore, and Saudi Arabia |
 | **Real-time Geofencing** | GPS-based traffic zone detection using GeoJSON polygons + Shapely |
@@ -105,7 +105,7 @@
 │  │                                                    │      │
 │  │  ┌─────────────────────────────────────────────┐   │      │
 │  │  │            Tool Executor                    │   │      │
-│  │  │  lookup_fine  · lookup_rule                 │   │      │
+│  │  │  lookup_fine  · lookup_rule  · search_web   │   │      │
 │  │  │  check_zone   · search_rules               │   │      │
 │  │  └──────┬──────────┬──────────┬────────────┬───┘   │      │
 │  │         │          │          │            │        │      │
@@ -460,7 +460,7 @@ Root endpoint. Returns welcome message and useful links.
 ```json
 {
   "status": "ok",
-  "response": "## Fine for No Helmet in Tamil Nadu\n\nThe fine for...",
+  "response": "**SHORT ANSWER:** Yes, there is a fine for riding without a helmet in Tamil Nadu.\n\n**CONSEQUENCES & REQUIREMENTS:** You will be stopped by traffic police and required to pay a fine. Both rider and pillion must wear helmets.\n\n**IMPORTANT FACTS:** Always ensure your helmet has an ISI MARK.\n\n**FINE SECTION:**\n- First offence: ₹1,000\n- Repeat offence: ₹1,000\n- Action: License may be suspended for up to 3 months.\n\n**SOURCE:** Based on Motor Vehicles Act 1988, Section 194D.",
   "tools_used": [
     {
       "tool": "lookup_fine",

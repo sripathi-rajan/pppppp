@@ -58,21 +58,31 @@ You have access to a comprehensive database covering traffic laws in:
 </identity>
 
 <communication_style>
-- **Detailed & Comprehensive:** Write thorough, informative answers — typically 3-5 paragraphs. Explain the legal basis, practical implications, and what happens in practice.
-- **Conversational Expert Tone:** Write like a knowledgeable friend who happens to be a traffic lawyer. Be warm, helpful, and reassuring — not robotic or terse.
-- **Well-Structured Markdown:** Use bold headers (##), bullet points, and blockquotes to organize information beautifully. Make answers scannable and professional.
-- **Practical Advice:** Beyond just stating the fine amount, explain:
-  * What happens when you get caught (procedure)
-  * First offence vs repeat offence penalties
-  * Additional consequences (license suspension, black points, vehicle impound, jail)
-  * How to pay the fine / appeal process
-  * Tips to avoid the violation
-- **Currency Awareness:** Always display fines in the correct local currency with the right symbol (INR for India, AED for UAE, GBP for UK, USD for USA, SGD for Singapore, SAR for Saudi Arabia).
-- **Comparisons:** When the user asks to compare fines between countries, present a clear comparison table.
+- **Mandatory Output Structure:** Every response MUST strictly follow this exact layout. Use BLOCK LETTERS for subtitles. Do NOT use any emojis anywhere in the response.
+  
+  [1-2 sentence short summary of the rule/fine]
+  
+  POSSIBLE CONSEQUENCES
+  
+  FINE
+  [Fine Amount with currency symbol]
+  
+  DRIVING LICENCE
+  [Licence consequences, e.g., May be disqualified/suspended for up to 3 months]
+  
+  ENFORCEMENT
+  [How it is enforced, e.g., Traffic police may issue an e-Challan or spot challan]
+  
+  LEGAL REFERENCE
+  [Act name and Section]
+  Source: [Link from the web or database]
+  
+- **Tone:** Professional but accessible. Do not deviate from this template structure. No emojis.
+- **Currency:** Always display fines with the correct local currency symbol.
 </communication_style>
 
 <core_instructions>
-1. **Tool Usage (CRITICAL):** You MUST use your available tools (`lookup_fine`, `lookup_rule`, `check_zone`, `search_rules`) to fetch data before answering. NEVER hallucinate fine amounts, sections, or legal details.
+1. **Tool Usage (CRITICAL):** You MUST use your available tools (`lookup_fine`, `lookup_rule`, `check_zone`, `search_rules`, `search_web`) to fetch data before answering. NEVER hallucinate fine amounts, sections, or legal details. Use `search_web` if the local database does not have the information.
 2. **Country Detection:** When the user mentions a country or city (Dubai, UK, USA, Singapore, Saudi, etc.), use the correct country code in the `lookup_fine` tool call. Default to India ('IN') when no country is specified.
 3. **Handle Missing Data:** If a tool returns `"found": false`, honestly say the specific data isn't in the database yet, but share what you do know from your general knowledge with a clear disclaimer.
 4. **Location Context:** Only call `check_zone` when the user explicitly asks about their physical location or GPS-based restrictions.
@@ -100,6 +110,65 @@ You have access to a comprehensive database covering traffic laws in:
 - When displaying fine amounts, ALWAYS use the correct currency symbol for the country.
 </output_rules>"""
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Post-hoc Grounding Check — catches ungrounded currency figures
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _flatten_numeric_values(obj) -> set:
+    """Recursively pull every int/float out of a nested dict/list tool result."""
+    values = set()
+    if isinstance(obj, dict):
+        for v in obj.values():
+            values |= _flatten_numeric_values(v)
+    elif isinstance(obj, list):
+        for v in obj:
+            values |= _flatten_numeric_values(v)
+    elif isinstance(obj, (int, float)) and not isinstance(obj, bool):
+        values.add(float(obj))
+    return values
+
+
+def enforce_grounding(response_text: str, tools_used: list) -> str:
+    """
+    Scans the model's draft response for currency-prefixed numbers
+    (₹, AED, £, $, SGD, SAR) and checks whether each one actually
+    appears in any tool_result payload from this turn. If a number
+    has no backing tool result, append a visible warning.
+    """
+    currency_pattern = re.compile(
+        r"(₹|AED|£|GBP|\$|USD|SGD|SAR)\s?([\d,]+(?:\.\d+)?)"
+    )
+    found_numbers = currency_pattern.findall(response_text)
+    if not found_numbers:
+        return response_text
+
+    # Flatten every numeric value present anywhere in any tool result
+    grounded_values = set()
+    for tool_call in tools_used or []:
+        result = tool_call.get("result", {})
+        for v in _flatten_numeric_values(result):
+            grounded_values.add(v)
+
+    ungrounded = []
+    for symbol, num_str in found_numbers:
+        clean = num_str.replace(",", "")
+        try:
+            val = float(clean)
+        except ValueError:
+            continue
+        if val not in grounded_values:
+            ungrounded.append(f"{symbol}{num_str}")
+
+    if ungrounded:
+        flagged = ", ".join(sorted(set(ungrounded)))
+        response_text += (
+            f"\n\n> [!CAUTION]\n"
+            f"> The figure(s) {flagged} in this answer could not be verified "
+            f"against DriveLegal's database. Please confirm "
+            f"with an official source before relying on this number."
+        )
+    return response_text
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -262,6 +331,28 @@ class AgentEngine:
         # Remove unclosed thinking tags (model may not close them)
         text = re.sub(r'<(?:thought|think|reasoning)>.*', '', text, flags=re.DOTALL)
         # Clean up excess whitespace left behind
+        text = re.sub(r'\n{3,}', '\n\n', text)
+        return text.strip()
+
+    def _sanitize_response(self, text: str) -> str:
+        """Strip markdown headers, table syntax, and underline-style headers
+        so the response looks clean on mobile apps that don't render markdown."""
+        # Remove markdown headers: ## Title  →  **Title**
+        text = re.sub(r'^#{1,6}\s+(.+)$', r'**\1**', text, flags=re.MULTILINE)
+        # Remove underline-style headers:  ======  or  ------
+        text = re.sub(r'^[=]{3,}\s*$', '', text, flags=re.MULTILINE)
+        text = re.sub(r'^[-]{3,}\s*$', '', text, flags=re.MULTILINE)
+        # Remove markdown table separator rows like  |---|---|---|
+        text = re.sub(r'^\|[-:\s|]+\|\s*$', '', text, flags=re.MULTILINE)
+        # Convert table rows (lines with 2+ pipes) to plain text with bullet separator
+        def _convert_table_row(m):
+            row = m.group(0)
+            cells = [c.strip() for c in row.strip('| \t').split('|') if c.strip()]
+            if not cells:
+                return ''
+            return ' • '.join(cells)
+        text = re.sub(r'^\|.+\|[ \t]*$', _convert_table_row, text, flags=re.MULTILINE)
+        # Clean up excess blank lines left behind
         text = re.sub(r'\n{3,}', '\n\n', text)
         return text.strip()
 
@@ -613,8 +704,9 @@ class AgentEngine:
                         ),
                     })
 
-            # Extract final text and strip thinking tags
+            # Extract final text, strip thinking tags, and sanitize formatting
             final_text = self._strip_thinking_tags((assistant_message.content or "").strip())
+            final_text = self._sanitize_response(final_text)
 
             # If the final response is just JSON (tool call output), do one more pass
             if final_text and self._looks_like_json_tool_call(final_text) and tools_used:
@@ -641,6 +733,7 @@ class AgentEngine:
                     timeout=30.0,
                 )
                 final_text = self._strip_thinking_tags((response.choices[0].message.content or "").strip())
+                final_text = self._sanitize_response(final_text)
 
             if not final_text:
                 final_text = (
@@ -660,6 +753,13 @@ class AgentEngine:
                         f"{verification.get('response', '').strip()}"
                     )
 
+            # Post-hoc grounding check — flag ungrounded currency figures
+            final_text = enforce_grounding(final_text, tools_used)
+
+            # Programmatically append disclaimer if missing
+            if "> [!NOTE]" not in final_text and "> ⚠️" not in final_text and "> [!CAUTION]" not in final_text and len(final_text) > 50:
+                final_text += "\n\n> [!NOTE]\n> This is informational only. Consult official sources or a legal professional for official advice."
+
             return {
                 "status": "ok",
                 "response": final_text,
@@ -675,7 +775,7 @@ class AgentEngine:
             # Try Gemini as fallback
             if self.gemini_available:
                 logger.info("[Agent] Ollama failed. Falling back to Gemini.")
-                return self._run_gemini(user_text, history, gps)
+                return self._run_gemini(user_text, history, gps, None, None)
 
             fallback = self._keyword_fallback(user_text, gps)
             fallback["error_detail"] = error_msg
