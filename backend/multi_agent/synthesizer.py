@@ -57,24 +57,22 @@ class SmartSynthesizer:
         print(f"   Confidence: {internal_confidence}")
         print(f"   Coverage: {coverage_score:.0%}")
         
-        if internal_confidence >= 0.8 and coverage_score >= 0.7:
-            final_answer = self._build_high_confidence_answer(
-                raw_evaluation, user_question, query_intent, all_sources
-            )
-            display_mode = "authoritative"
-            
-        elif coverage_score < 0.5 and query_intent == QueryIntent.BROAD_EDUCATIONAL:
-            print("[INFO] Low coverage detected - enhancing with general knowledge...")
+        if query_intent == QueryIntent.BROAD_EDUCATIONAL:
+            print("[INFO] Broad query detected - generating comprehensive guide...")
             final_answer = await self._enhance_with_general_knowledge(
                 raw_evaluation, user_question, all_sources
             )
             display_mode = "educational_comprehensive"
-            
         else:
-            final_answer = self._build_medium_confidence_answer(
-                raw_evaluation, user_question, all_sources
+            print("[INFO] Specific query detected - synthesizing direct answer...")
+            final_answer = await self._synthesize_specific_answer(
+                user_question, all_sources
             )
-            display_mode = "helpful_cautious"
+            display_mode = "authoritative" if internal_confidence >= 0.8 else "helpful_cautious"
+            
+            # Add helpful footer for medium confidence specific queries
+            if internal_confidence < 0.8:
+                final_answer += "\n\n---\n[INFO] **Want to verify?**\nFor the most current penalty amounts in your specific state, check **parivahan.gov.in** or your local RTO."
         
         urls = []
         for s in all_sources:
@@ -198,28 +196,20 @@ Total length: 600-900 words covering ALL requested topics."""
                 return s
         return sources[0] if sources else None
 
-    def _build_high_confidence_answer(self, eval_result, question, intent, sources):
-        best_source = self._pick_best_source(eval_result, sources)
-        answer = best_source.answer if best_source else "Data verified."
-        
-        formatted = f"{answer}\n\n---\n[INFO] **Information verified against official traffic rule database.**"
-        return formatted
-    
-    def _build_medium_confidence_answer(self, eval_result, question, sources):
-        best_source = self._pick_best_source(eval_result, sources)
-        answer = best_source.answer if best_source else "Here is the information."
-        
-        formatted = f"""{answer}
+    async def _synthesize_specific_answer(self, question: str, sources: List[SourceAnswer]) -> str:
+        partial_info = "\n".join([str(s.answer) for s in sources])
+        prompt = f"""The user asked a specific traffic rule question: "{question}"
 
----
-[INFO] **Want to dive deeper?**
-For the most current penalty amounts in your specific state, you can check:
-* **parivahan.gov.in** - Official government portal  
-* **Your local RTO office** - In-person assistance  
-* **mParivahan app** - Mobile access to services
+Here is the raw data retrieved from our database and web search:
+{partial_info[:2000]}
 
-[INFO] Drive safely!"""
-        return formatted
+TASK: Synthesize a direct, professional, and highly accurate answer to the user's question using ONLY the provided data.
+- DO NOT output raw search results like "DuckDuckGo Search Results:".
+- Write a coherent, helpful response.
+- Use bolding for important numbers (like fines or sections).
+- Do not add information not present in the sources.
+"""
+        return await self._call_llm_for_enhancement(prompt)
     
     def _get_recommendation(self, confidence: float, coverage: float) -> str:
         if confidence >= 0.8 and coverage >= 0.8:
