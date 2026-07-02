@@ -127,15 +127,18 @@ class SourceAggregator:
                     metadata={"source": "duckduckgo"}
                 )
             
+            urls = []
             compiled_answer = "DuckDuckGo Search Results:\n"
             for idx, res in enumerate(results):
                 compiled_answer += f"{idx+1}. {res.get('title')}: {res.get('body')}\n"
+                if res.get('href'):
+                    urls.append(res.get('href'))
                 
             return SourceAnswer(
                 source=SourceType.GOOGLE,
                 answer=compiled_answer,
                 confidence=0.75,
-                metadata={"source": "duckduckgo", "raw_results": len(results)}
+                metadata={"source": "duckduckgo", "raw_results": len(results), "urls": urls}
             )
         except Exception as e:
             return SourceAnswer(source=SourceType.GOOGLE, answer=f"Failed to fetch web results: {str(e)}", confidence=0.0, metadata={"error": str(e)})

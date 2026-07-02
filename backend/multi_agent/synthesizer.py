@@ -76,6 +76,16 @@ class SmartSynthesizer:
             )
             display_mode = "helpful_cautious"
         
+        urls = []
+        for s in all_sources:
+            if s.source.value == "google" and "urls" in s.metadata:
+                urls.extend(s.metadata["urls"])
+        
+        if urls:
+            final_answer += "\n\n**References:**\n"
+            for u in urls:
+                final_answer += f"• {u}\n"
+
         formatted_answer = format_answer_professional(final_answer)
         
         output = {
