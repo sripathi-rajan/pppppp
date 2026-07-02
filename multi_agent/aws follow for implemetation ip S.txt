@@ -1,0 +1,44 @@
+# How to Allocate and Manage AWS Elastic IPs (Static IPs)
+
+When deploying DriveLegal (or any production app) to AWS, the default public IP assigned to an EC2 instance changes every time the instance is stopped and started. To prevent this, you must use an **Elastic IP (EIP)**, which is a static public IP address that remains yours until you explicitly release it.
+
+## Part 1: How to Allocate an Elastic IP in AWS
+
+1. Log in to the **AWS Management Console**.
+2. Navigate to the **EC2 Dashboard**.
+3. In the left-hand navigation pane, under **Network & Security**, click on **Elastic IPs**.
+4. Click the orange **Allocate Elastic IP address** button in the top right.
+5. Leave the "Network Border Group" and "Public IPv4 address pool" settings as their defaults (usually Amazon's pool).
+6. Click **Allocate**. 
+7. You will be redirected back to the Elastic IPs page. You will now see a new IP address allocated to your account.
+
+## Part 2: How to Associate the IP to your Server
+
+1. Select the newly allocated Elastic IP from the list.
+2. Click on the **Actions** dropdown menu and select **Associate Elastic IP address**.
+3. In the association page:
+   - Resource type: Choose **Instance**.
+   - Instance: Click the dropdown and select your running DriveLegal EC2 instance.
+   - Private IP address: (Optional) Select the private IP of the instance if prompted.
+4. Click **Associate**. 
+5. Your EC2 instance is now reachable via this static Elastic IP.
+
+## Part 3: How to Note and Manage IPs Correctly for Implementation
+
+To ensure smooth implementation, keep a configuration mapping document (or use a secure password manager/secrets vault) to track your infrastructure.
+
+Note down the following details for your deployment day:
+
+### IP Inventory Template
+- **Server Name**: DriveLegal Production API
+- **Instance ID**: i-0abcd1234efgh5678 (Example)
+- **AWS Region**: ap-south-1 (Mumbai)
+- **Elastic IP (Public)**: `[Write your EIP here, e.g., 203.0.113.45]`
+- **Private IP (Internal)**: `[Write your Private IP here, e.g., 172.31.10.5]`
+- **DNS Record to Map**: api.drivelegal.in -> `[Your Elastic IP]`
+
+### Deployment Day Checklist:
+1. Ensure the A-Record in your Domain Registrar (e.g., Route53, GoDaddy) points to the **Elastic IP**.
+2. Update your `.env` files in any frontend apps to point to `http://[Elastic IP]:[Port]` (or your domain).
+3. If you ever stop/start the server, verify the Elastic IP is still attached (it should be).
+4. **Important**: AWS charges a small fee for Elastic IPs that are allocated but *not* associated with a running instance. If you terminate the instance, remember to release the Elastic IP.

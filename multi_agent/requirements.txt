@@ -1,0 +1,5 @@
+openai
+aiohttp
+pydantic
+duckduckgo-search
+python-dotenv
