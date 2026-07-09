@@ -45,15 +45,27 @@ async function localLogin(email: string, password: string) {
   return acc;
 }
 
+const GENDER_OPTIONS = ['Male', 'Female', 'Other', 'Prefer not to say'];
+
 export default function LoginScreen() {
   const router = useRouter();
   const { login: authLogin } = useAuth();
 
   const [isLogin, setIsLogin] = useState(true);
+  
+  // Profile Fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [vehicleNumber, setVehicleNumber] = useState('');
+  const [gender, setGender] = useState('Prefer not to say');
+
+  // Google Profile Completion State
+  const [isCompletingProfile, setIsCompletingProfile] = useState(false);
+  const [googleData, setGoogleData] = useState<{name: string, email: string, googleId: string} | null>(null);
+
   const [isLoading, setIsLoading] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [formError, setFormError] = useState('');
@@ -70,11 +82,6 @@ export default function LoginScreen() {
     redirectUri: redirectUri,
   });
 
-  // Log the redirect URI to the console so we can see exactly what it is
-  useEffect(() => {
-    console.log('[Google Auth] The Redirect URI is:', redirectUri);
-  }, [redirectUri]);
-
   useEffect(() => {
     if (response?.type === 'success') {
       const { authentication } = response;
@@ -89,7 +96,6 @@ export default function LoginScreen() {
     setIsLoading(true);
     setFormError('');
     try {
-      // 1. Fetch user info from Google
       const userInfoResponse = await fetch('https://www.googleapis.com/userinfo/v2/me', {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -101,37 +107,43 @@ export default function LoginScreen() {
 
       const baseUrl = getApiBaseUrl();
 
-      // 2. Send email to backend /google endpoint
       const res = await fetch(`${baseUrl}/api/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           email: userInfo.email, 
-          name: userInfo.name || userInfo.email.split('@')[0] 
+          name: userInfo.name || userInfo.email.split('@')[0],
+          googleId: userInfo.id
         }),
       });
       
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.detail || data.message || 'Google Login Failed on Server');
       
+      if (data.require_profile_completion) {
+         setGoogleData(data.googleProfile);
+         setName(data.googleProfile.name);
+         setEmail(data.googleProfile.email);
+         setIsCompletingProfile(true);
+         setIsLoading(false);
+         return; // Wait for user to complete profile
+      }
+
       const token = data.access_token;
       if (!token) throw new Error('Server returned no token.');
       
-      // 3. Fetch user profile
       const meRes = await fetch(`${baseUrl}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const userData = await meRes.json().catch(() => ({}));
       if (!meRes.ok) throw new Error(userData.detail || 'Profile fetch failed');
       
-      // 4. Log in locally
       await authLogin(token, userData);
       router.replace('/(tabs)');
       
     } catch (err: any) {
       console.error('[Google Login] Error:', err);
       setFormError(err.message || 'Google login failed.');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -159,40 +171,74 @@ export default function LoginScreen() {
 
   const switchMode = () => {
     setIsLogin(!isLogin);
+    setIsCompletingProfile(false);
     setFormError('');
     setPasswordError('');
     setEmail('');
     setPassword('');
     setConfirmPassword('');
     setName('');
+    setPhone('');
+    setVehicleNumber('');
+    setGender('Prefer not to say');
   };
 
   const handleAuth = async () => {
     setFormError('');
-
-    if (!email.trim()) { setFormError('Please enter your email.'); return; }
-    if (!password) { setFormError('Please enter your password.'); return; }
-    if (!isLogin && !name.trim()) { setFormError('Please enter your full name.'); return; }
-    if (!isLogin && password !== confirmPassword) {
-      setPasswordError('Passwords do not match');
-      return;
+    
+    if (isCompletingProfile) {
+      if (!phone.trim()) { setFormError('Please enter your phone number.'); return; }
+    } else {
+      if (!email.trim()) { setFormError('Please enter your email.'); return; }
+      if (!password) { setFormError('Please enter your password.'); return; }
+      if (!isLogin) {
+        if (!name.trim()) { setFormError('Please enter your full name.'); return; }
+        if (!phone.trim()) { setFormError('Please enter your phone number.'); return; }
+        if (password !== confirmPassword) {
+          setPasswordError('Passwords do not match');
+          return;
+        }
+      }
     }
 
     setPasswordError('');
     setIsLoading(true);
 
     const trimmedEmail = email.trim().toLowerCase();
+    const baseUrl = getApiBaseUrl();
 
     try {
       let token: string | null = null;
       let userData: any = null;
       let useLocalFallback = false;
 
-      const baseUrl = getApiBaseUrl();
-
       try {
-        if (!isLogin) {
-          // Register
+        if (isCompletingProfile && googleData) {
+           // Google Profile Completion
+           let compRes;
+           try {
+             compRes = await fetch(`${baseUrl}/api/auth/complete-profile`, {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({
+                 name: googleData.name,
+                 email: googleData.email,
+                 googleId: googleData.googleId,
+                 phone: phone.trim(),
+                 gender,
+                 vehicleNumber: vehicleNumber.trim() || null
+               }),
+             });
+           } catch (netErr) {
+             useLocalFallback = true;
+             throw new Error('NETWORK_ERROR');
+           }
+           const compData = await compRes.json().catch(() => ({}));
+           if (!compRes.ok) throw new Error(compData.detail || compData.message || `Profile completion failed`);
+           
+           token = compData.access_token;
+        } else if (!isLogin) {
+          // Local Register
           let regRes;
           try {
             regRes = await fetch(`${baseUrl}/api/auth/register`, {
@@ -202,7 +248,9 @@ export default function LoginScreen() {
                 name: name.trim(),
                 email: trimmedEmail,
                 password,
-                phone: '0000000000',
+                phone: phone.trim(),
+                gender,
+                vehicleNumber: vehicleNumber.trim() || null,
                 vehicles: [],
               }),
             });
@@ -211,11 +259,11 @@ export default function LoginScreen() {
             throw new Error('NETWORK_ERROR');
           }
           const regData = await regRes.json().catch(() => ({}));
-          if (!regRes.ok) throw new Error(regData.detail || regData.message || `Registration failed (${regRes.status})`);
-        }
-
-        if (!useLocalFallback) {
-          // Login
+          if (!regRes.ok) throw new Error(regData.detail || regData.message || `Registration failed`);
+          
+          token = regData.access_token;
+        } else {
+          // Local Login
           let loginRes;
           try {
             loginRes = await fetch(`${baseUrl}/api/auth/login`, {
@@ -228,11 +276,12 @@ export default function LoginScreen() {
             throw new Error('NETWORK_ERROR');
           }
           const loginData = await loginRes.json().catch(() => ({}));
-          if (!loginRes.ok) throw new Error(loginData.detail || loginData.message || `Login failed (${loginRes.status})`);
-
+          if (!loginRes.ok) throw new Error(loginData.detail || loginData.message || `Login failed`);
+          
           token = loginData.access_token;
-          if (!token) throw new Error('Server returned no token.');
+        }
 
+        if (!useLocalFallback && token) {
           // Fetch user profile
           let meRes;
           try {
@@ -248,30 +297,29 @@ export default function LoginScreen() {
         }
       } catch (backendErr: any) {
         if (backendErr.message !== 'NETWORK_ERROR') {
-          // This is a legitimate backend error (e.g., 400 Email already registered)
           throw backendErr;
         }
       }
 
       if (useLocalFallback) {
-        // ── Backend unreachable → fall back to local store ───
         console.warn('[Login] Backend unavailable, using local fallback');
-
-        if (!isLogin) {
+        if (!isLogin && !isCompletingProfile) {
           await localRegister(name.trim(), trimmedEmail, password);
         }
-        const localUser = await localLogin(trimmedEmail, password);
-
-        // Build a mock token & user object for local session
-        token = `local_${Date.now()}`;
-        userData = {
-          _id: trimmedEmail,
-          name: localUser.name,
-          email: localUser.email,
-          phone: '',
-          vehicles: [],
-          createdAt: new Date().toISOString(),
-        };
+        if (!isCompletingProfile) {
+          const localUser = await localLogin(trimmedEmail, password);
+          token = `local_${Date.now()}`;
+          userData = {
+            _id: trimmedEmail,
+            name: localUser.name,
+            email: localUser.email,
+            phone: phone || '',
+            vehicles: [],
+            createdAt: new Date().toISOString(),
+          };
+        } else {
+           throw new Error("Cannot complete profile offline");
+        }
       }
 
       await authLogin(token!, userData);
@@ -315,31 +363,33 @@ export default function LoginScreen() {
 
           {/* Heading */}
           <Text style={styles.title}>
-            {isLogin ? 'Welcome Back' : 'Create Account'}
+            {isCompletingProfile ? 'Complete Profile' : (isLogin ? 'Welcome Back' : 'Create Account')}
           </Text>
           <Text style={styles.subtitle}>
-            {isLogin
-              ? 'Log in to continue to DriveLegal'
-              : 'Sign up to get started'}
+            {isCompletingProfile ? 'Just a few more details to get started' : (isLogin ? 'Log in to continue to DriveLegal' : 'Sign up to get started')}
           </Text>
 
-          {/* Google Button */}
-          <TouchableOpacity
-            style={styles.googleButton}
-            onPress={() => promptAsync()}
-            disabled={!request || isLoading}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="logo-google" size={20} color="#DB4437" style={{ marginRight: 10 }} />
-            <Text style={styles.googleButtonText}>Continue with Google</Text>
-          </TouchableOpacity>
+          {!isCompletingProfile && (
+            <>
+              {/* Google Button */}
+              <TouchableOpacity
+                style={styles.googleButton}
+                onPress={() => promptAsync()}
+                disabled={!request || isLoading}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="logo-google" size={20} color="#DB4437" style={{ marginRight: 10 }} />
+                <Text style={styles.googleButtonText}>Continue with Google</Text>
+              </TouchableOpacity>
 
-          {/* Divider */}
-          <View style={styles.dividerRow}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.divider} />
-          </View>
+              {/* Divider */}
+              <View style={styles.dividerRow}>
+                <View style={styles.divider} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.divider} />
+              </View>
+            </>
+          )}
 
           {/* Inline error */}
           {!!formError && (
@@ -349,8 +399,8 @@ export default function LoginScreen() {
             </View>
           )}
 
-          {/* Name (sign-up only) */}
-          {!isLogin && (
+          {/* Name */}
+          {(!isLogin || isCompletingProfile) && (
             <View style={styles.inputWrapper}>
               <Ionicons name="person-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
               <TextInput
@@ -361,6 +411,7 @@ export default function LoginScreen() {
                 onChangeText={(t) => { setName(t); setFormError(''); }}
                 autoCapitalize="words"
                 returnKeyType="next"
+                editable={!isCompletingProfile} // Disable if from Google
               />
             </View>
           )}
@@ -378,26 +429,81 @@ export default function LoginScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="next"
+              editable={!isCompletingProfile} // Disable if from Google
             />
           </View>
+
+          {/* Phone */}
+          {(!isLogin || isCompletingProfile) && (
+            <View style={styles.inputWrapper}>
+              <Ionicons name="call-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Phone Number"
+                placeholderTextColor="#9ca3af"
+                value={phone}
+                onChangeText={(t) => { setPhone(t); setFormError(''); }}
+                keyboardType="phone-pad"
+                returnKeyType="next"
+              />
+            </View>
+          )}
+
+          {/* Vehicle Number (Optional) */}
+          {(!isLogin || isCompletingProfile) && (
+            <View style={styles.inputWrapper}>
+              <Ionicons name="car-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Vehicle Number (Optional)"
+                placeholderTextColor="#9ca3af"
+                value={vehicleNumber}
+                onChangeText={(t) => { setVehicleNumber(t); setFormError(''); }}
+                autoCapitalize="characters"
+                returnKeyType="next"
+              />
+            </View>
+          )}
+
+          {/* Gender */}
+          {(!isLogin || isCompletingProfile) && (
+            <View style={styles.genderContainer}>
+              <Text style={styles.genderLabel}>Gender</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.genderScroll}>
+                {GENDER_OPTIONS.map(opt => (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[styles.genderChip, gender === opt && styles.genderChipActive]}
+                    onPress={() => setGender(opt)}
+                  >
+                    <Text style={[styles.genderChipText, gender === opt && styles.genderChipTextActive]}>
+                      {opt}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {/* Password */}
-          <View style={styles.inputWrapper}>
-            <Ionicons name="lock-closed-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor="#9ca3af"
-              value={password}
-              onChangeText={(t) => { setPassword(t); setFormError(''); }}
-              secureTextEntry
-              returnKeyType={isLogin ? 'done' : 'next'}
-              onSubmitEditing={isLogin ? handleAuth : undefined}
-            />
-          </View>
+          {!isCompletingProfile && (
+            <View style={styles.inputWrapper}>
+              <Ionicons name="lock-closed-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                placeholderTextColor="#9ca3af"
+                value={password}
+                onChangeText={(t) => { setPassword(t); setFormError(''); }}
+                secureTextEntry
+                returnKeyType={isLogin ? 'done' : 'next'}
+                onSubmitEditing={isLogin ? handleAuth : undefined}
+              />
+            </View>
+          )}
 
           {/* Confirm Password (sign-up only) */}
-          {!isLogin && (
+          {(!isLogin && !isCompletingProfile) && (
             <>
               <View style={[styles.inputWrapper, !!passwordError && styles.inputWrapperError]}>
                 <Ionicons
@@ -434,22 +540,24 @@ export default function LoginScreen() {
               <ActivityIndicator color="#fff" size="small" />
             ) : (
               <Text style={styles.primaryButtonText}>
-                {isLogin ? 'Log In' : 'Sign Up'}
+                {isCompletingProfile ? 'Complete Registration' : (isLogin ? 'Log In' : 'Sign Up')}
               </Text>
             )}
           </TouchableOpacity>
 
           {/* Toggle login/signup */}
-          <View style={styles.toggleRow}>
-            <Text style={styles.toggleText}>
-              {isLogin ? "Don't have an account?  " : 'Already have an account?  '}
-            </Text>
-            <TouchableOpacity onPress={switchMode} activeOpacity={0.7}>
-              <Text style={styles.toggleLink}>
-                {isLogin ? 'Sign up' : 'Log in'}
+          {!isCompletingProfile && (
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleText}>
+                {isLogin ? "Don't have an account?  " : 'Already have an account?  '}
               </Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity onPress={switchMode} activeOpacity={0.7}>
+                <Text style={styles.toggleLink}>
+                  {isLogin ? 'Sign up' : 'Log in'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -545,6 +653,41 @@ const styles = StyleSheet.create({
     marginTop: -8,
     marginBottom: 12,
     marginLeft: 4,
+  },
+  
+  genderContainer: {
+    marginBottom: 14,
+  },
+  genderLabel: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginBottom: 8,
+    marginLeft: 4,
+    fontWeight: '500'
+  },
+  genderScroll: {
+    gap: 8,
+    paddingBottom: 4
+  },
+  genderChip: {
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  genderChipActive: {
+    borderColor: '#C9621D',
+    backgroundColor: '#fff7ed',
+  },
+  genderChipText: {
+    color: '#6b7280',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  genderChipTextActive: {
+    color: '#C9621D',
   },
 
   primaryButton: {

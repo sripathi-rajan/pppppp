@@ -552,88 +552,6 @@ export default function DriveLegalAssistant() {
       <StatusBar style="dark" />
       
       <View style={styles.mainLayout}>
-        {/* Backdrop for Mobile */}
-        {!isDesktop && isSidebarOpen && (
-          <TouchableOpacity 
-            style={styles.backdrop} 
-            activeOpacity={1} 
-            onPress={closeSidebarMobile}
-          />
-        )}
-
-        {/* Sidebar */}
-        <Animated.View style={[
-          isDesktop ? styles.sidebarDesktop : styles.sidebarMobile,
-          {
-            width: sidebarWidth,
-            transform: !isDesktop ? [{
-              translateX: sidebarAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [-sidebarWidth, 0]
-              })
-            }] : [],
-            marginLeft: isDesktop ? sidebarAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [-sidebarWidth, 0]
-            }) : 0
-          }
-        ]}>
-          <SafeAreaView style={{flex: 1}} edges={['top', 'bottom']}>
-            <View style={styles.sidebarContent}>
-              <View style={styles.sidebarHeader}>
-                <View style={styles.searchContainer}>
-                  <Ionicons name="search" size={16} color="#9ca3af" style={styles.searchIcon} />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search chats"
-                    placeholderTextColor="#9ca3af"
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                  />
-                </View>
-                <TouchableOpacity style={styles.newChatButton} onPress={handleNewChat}>
-                  <View style={styles.newChatIconBg}>
-                    <Ionicons name="add" size={18} color="#1c1c1c" />
-                  </View>
-                  <Text style={styles.newChatText}>New Chat</Text>
-                </TouchableOpacity>
-              </View>
-              
-              <Text style={styles.historyHeader}>Recents</Text>
-              <ScrollView style={styles.historyList}>
-                {sessions.length === 0 ? (
-                  <Text style={styles.emptyHistoryText}>No previous sessions</Text>
-                ) : (
-                  sessions.filter(s => {
-                    const displayTitle = s.title.startsWith('I am at ') ? 'Local traffic rules' : s.title;
-                    return displayTitle.toLowerCase().includes(searchQuery.toLowerCase());
-                  }).map(s => {
-                    const displayTitle = s.title.startsWith('I am at ') ? 'Local traffic rules' : s.title;
-                    return (
-                      <TouchableOpacity key={s.id} style={[styles.historyItem, activeSessionId === s.id && styles.historyItemActive]} onPress={() => handleLoadSession(s)}>
-                        <Text style={[styles.historyItemText, activeSessionId === s.id && { color: "#1c1c1c", fontWeight: "600" }]} numberOfLines={1}>{displayTitle}</Text>
-                      </TouchableOpacity>
-                    );
-                  })
-                )}
-              </ScrollView>
-
-              {/* User Profile Area */}
-              <View style={styles.sidebarFooter}>
-                <View style={styles.userAvatar}>
-                  <Text style={styles.userAvatarText}>{profile.avatar || 'D'}</Text>
-                </View>
-                <View style={styles.userInfo}>
-                  <Text style={styles.userName}>{profile.name}</Text>
-                </View>
-                <TouchableOpacity onPress={() => router.push('/(tabs)/settings')}>
-                  <Ionicons name="settings-outline" size={20} color="#4b5563" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </SafeAreaView>
-        </Animated.View>
-
         {/* Main Chat Area */}
         <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -657,8 +575,8 @@ export default function DriveLegalAssistant() {
             <View style={styles.assistantIcon}>
               <MaterialCommunityIcons name="auto-fix" size={18} color="#fff" />
             </View>
-            <View>
-              <Text style={styles.headerTitle}>{t('assistant_name')}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">{t('assistant_name')}</Text>
               <View style={styles.statusRow}>
                 <View style={styles.statusDot} />
                 <Text style={styles.statusText}>{t('assistant_status')}</Text>
@@ -819,6 +737,89 @@ export default function DriveLegalAssistant() {
           </View>
           </View>
         </KeyboardAvoidingView>
+
+        {/* Backdrop for Mobile */}
+        {!isDesktop && isSidebarOpen && (
+          <TouchableOpacity 
+            style={styles.backdrop} 
+            activeOpacity={1} 
+            onPress={closeSidebarMobile}
+          />
+        )}
+
+        {/* Sidebar (Rendered after KeyboardAvoidingView so it overlays) */}
+        <Animated.View style={[
+          isDesktop ? styles.sidebarDesktop : styles.sidebarMobile,
+          {
+            width: sidebarWidth,
+            transform: !isDesktop ? [{
+              translateX: sidebarAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [-sidebarWidth, 0]
+              })
+            }] : [],
+            marginLeft: isDesktop ? sidebarAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [-sidebarWidth, 0]
+            }) : 0
+          }
+        ]}>
+          <SafeAreaView style={{flex: 1}} edges={['top', 'bottom']}>
+            <View style={styles.sidebarContent}>
+              <View style={styles.sidebarHeader}>
+                <View style={styles.searchContainer}>
+                  <Ionicons name="search" size={16} color="#9ca3af" style={styles.searchIcon} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search chats"
+                    placeholderTextColor="#9ca3af"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                </View>
+                <TouchableOpacity style={styles.newChatButton} onPress={handleNewChat}>
+                  <View style={styles.newChatIconBg}>
+                    <Ionicons name="add" size={18} color="#1c1c1c" />
+                  </View>
+                  <Text style={styles.newChatText}>New Chat</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <Text style={styles.historyHeader}>Recents</Text>
+              <ScrollView style={styles.historyList}>
+                {sessions.length === 0 ? (
+                  <Text style={styles.emptyHistoryText}>No previous sessions</Text>
+                ) : (
+                  sessions.filter(s => {
+                    const displayTitle = s.title.startsWith('I am at ') ? 'Local traffic rules' : s.title;
+                    return displayTitle.toLowerCase().includes(searchQuery.toLowerCase());
+                  }).map(s => {
+                    const displayTitle = s.title.startsWith('I am at ') ? 'Local traffic rules' : s.title;
+                    return (
+                      <TouchableOpacity key={s.id} style={[styles.historyItem, activeSessionId === s.id && styles.historyItemActive]} onPress={() => handleLoadSession(s)}>
+                        <Text style={[styles.historyItemText, activeSessionId === s.id && { color: "#1c1c1c", fontWeight: "600" }]} numberOfLines={1}>{displayTitle}</Text>
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
+              </ScrollView>
+
+              {/* User Profile Area */}
+              <View style={styles.sidebarFooter}>
+                <View style={styles.userAvatar}>
+                  <Text style={styles.userAvatarText}>{profile.avatar || 'D'}</Text>
+                </View>
+                <View style={styles.userInfo}>
+                  <Text style={styles.userName}>{profile.name}</Text>
+                </View>
+                <TouchableOpacity onPress={() => router.push('/(tabs)/settings')}>
+                  <Ionicons name="settings-outline" size={20} color="#4b5563" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </SafeAreaView>
+        </Animated.View>
+
       </View>
     </SafeAreaView>
   );

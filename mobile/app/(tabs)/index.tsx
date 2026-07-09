@@ -232,11 +232,13 @@ export default function HomeScreen() {
         
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
+          <View style={[styles.headerLeft, { flex: 1, paddingRight: 12 }]}>
             <View style={styles.logoContainer}>
               <Text style={styles.logoText}>DL</Text>
             </View>
-            <Text style={styles.greeting}>{greetingTime}, {(user?.name || profile.name).toUpperCase()}</Text>
+            <Text style={[styles.greeting, { flexShrink: 1 }]} numberOfLines={1} ellipsizeMode="tail">
+              {greetingTime}, {(user?.name || profile.name).toUpperCase()}
+            </Text>
           </View>
           <View style={styles.headerRight}>
 
