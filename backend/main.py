@@ -705,9 +705,20 @@ def get_health():
         agent_mode = f"ollama/{agent.ollama_model}"
     elif agent.gemini_available:
         agent_mode = "gemini-2.0-flash"
+        
+    deepseek_status = "unknown"
+    try:
+        from backend.multi_agent.config import config
+        req = urllib.request.Request(f"{config.DEEPSEEK_BASE_URL}/models", headers={"Authorization": f"Bearer {config.DEEPSEEK_API_KEY}"})
+        with urllib.request.urlopen(req, timeout=3) as response:
+            deepseek_status = "ok" if response.status == 200 else f"error ({response.status})"
+    except Exception as e:
+        deepseek_status = "error"
+
     return {
         "status":        "ok",
         "agent_mode":    agent_mode,
+        "deepseek_status": deepseek_status,
         "db_age":        db_age,
         "rules_count":   rules_count,
         "chat_handler":  "v3-memory",
