@@ -98,9 +98,17 @@ class SmartSynthesizer:
             partial_info += str(sources["ollama_answer"].answer) + "\n"
             
         prompt = f"""USER ASKED: "{question}"
+        
         Here is data from DB and AI:
         {partial_info[:1500]}
-        Synthesize a direct, helpful answer using ONLY this data."""
+        
+        Synthesize a direct, helpful answer using ONLY this data. 
+        
+        IMPORTANT FORMATTING RULES:
+        - Use numbered sections (e.g., "1. PENALTY DETAILS")
+        - Use **bold** for key terms or fines
+        - Use • bullets for itemized rules
+        - Keep it structured and easy to read."""
         return await self._call_local_llm(prompt)
         
     async def _synthesize_from_web_enhanced(self, sources, question, intent):
