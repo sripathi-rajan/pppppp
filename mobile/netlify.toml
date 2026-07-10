@@ -26,10 +26,10 @@
   EXPO_PUBLIC_API_URL = "/api"
 
 # ── API Proxy ────────────────────────────────────────────────────────────────
-# Forward /api/* to the AWS backend (Nginx on port 80 → localhost:8000)
+# Forward /api/* to the AWS backend (avoids CORS & mixed-content issues)
 [[redirects]]
   from = "/api/*"
-  to = "http://13.50.138.113/:splat"
+  to = "https://13.50.138.113.nip.io/:splat"
   status = 200
   force = true
 
