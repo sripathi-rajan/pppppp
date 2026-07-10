@@ -1,6 +1,11 @@
 # Script to quickly zip and push local changes to AWS without using Git
 $ErrorActionPreference = "Stop"
 
+Write-Host "Building web frontend locally..." -ForegroundColor Cyan
+Push-Location mobile
+npx expo export --platform web
+Pop-Location
+
 Write-Host "Zipping updated files (excluding venv, node_modules, etc)..." -ForegroundColor Cyan
 tar -czf update.tar.gz --exclude=backend/venv --exclude=backend/__pycache__ --exclude=mobile/node_modules --exclude=mobile/.expo --exclude=.git --exclude=update.tar.gz .
 
