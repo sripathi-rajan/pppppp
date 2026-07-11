@@ -16,8 +16,10 @@ export default function OnboardingScreen() {
     if (!hasCompletedOnboarding) {
       // First time → show onboarding
       setIsReady(true);
+    } else {
+      // If onboarding is done, proceed to login (where _layout.tsx auth guard handles routing)
+      router.replace('/login');
     }
-    // If onboarding is done, _layout.tsx auth guard handles routing
   }, [initialized, hasCompletedOnboarding]);
 
   if (!isReady) {
