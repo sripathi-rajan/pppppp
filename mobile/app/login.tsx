@@ -393,8 +393,18 @@ export default function LoginScreen() {
               <TouchableOpacity
                 style={styles.googleButton}
                 onPress={() => {
-                  if (Platform.OS === 'web' && request?.url) {
-                    window.location.href = request.url;
+                  if (Platform.OS === 'web') {
+                    // Expo's WebBrowser ALWAYS forces a popup due to passing 'features' to window.open.
+                    // We monkey-patch window.open temporarily to force a full-page redirect instead.
+                    const originalOpen = window.open;
+                    window.open = ((url: any, name: any, features: any) => {
+                      window.location.href = url;
+                      return window;
+                    }) as any;
+                    
+                    promptAsync().finally(() => {
+                      window.open = originalOpen;
+                    });
                   } else {
                     promptAsync();
                   }
