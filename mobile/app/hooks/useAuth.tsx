@@ -81,6 +81,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const storedUser  = await storage.get(USER_KEY);
 
       if (!storedToken) {
+        if (Platform.OS === 'web') {
+          const demoToken = `demo_${Date.now()}`;
+          const demoUser: User = {
+            _id: 999999,
+            name: 'Demo User',
+            email: 'demo@drivelegal.in',
+            phone: '9876543210',
+            vehicles: [],
+            createdAt: new Date().toISOString(),
+          };
+          await storage.set(TOKEN_KEY, demoToken);
+          await storage.set(USER_KEY, JSON.stringify(demoUser));
+          setToken(demoToken);
+          setUser(demoUser);
+          setIsLoading(false);
+          return;
+        }
+
         // No token stored → not logged in
         setIsLoading(false);
         return;
