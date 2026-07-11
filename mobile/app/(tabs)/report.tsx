@@ -52,7 +52,32 @@ export default function ReportScreen() {
     try {
       const existingStr = await AsyncStorage.getItem('reports_data');
       if (existingStr) {
-        setHistoryData(JSON.parse(existingStr));
+        let reports = JSON.parse(existingStr);
+        
+        // Sync statuses with backend
+        try {
+          const ids = reports.map((r: any) => r.id);
+          const apiUrl = getApiBaseUrl();
+          const res = await fetch(`${apiUrl}/report/sync`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ report_ids: ids })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.statuses) {
+              reports = reports.map((r: any) => ({
+                ...r,
+                status: data.statuses[r.id] || r.status
+              }));
+              await AsyncStorage.setItem('reports_data', JSON.stringify(reports));
+            }
+          }
+        } catch (syncErr) {
+          console.log('Error syncing statuses', syncErr);
+        }
+        
+        setHistoryData(reports);
       }
     } catch (e) {
       console.log('Error loading history', e);

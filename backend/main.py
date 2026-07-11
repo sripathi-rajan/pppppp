@@ -449,6 +449,26 @@ def get_briefs():
         print(f"Briefs error: {e}")
         return {"status": "error", "message": "Failed to fetch news."}
 
+class SyncRequest(BaseModel):
+    report_ids: List[str]
+
+@app.post("/report/sync")
+def sync_reports(request: SyncRequest = Body(...)):
+    """
+    Returns the latest status for a list of report IDs.
+    """
+    statuses = {}
+    for rid in request.report_ids:
+        path = os.path.join(REPORTS_DIR, f"{rid}.json")
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                statuses[rid] = data.get("status", "unverified")
+            except Exception:
+                pass
+    return {"statuses": statuses}
+
 @app.post("/report/submit")
 def submit_report(request: ReportRequest = Body(...)):
     """
