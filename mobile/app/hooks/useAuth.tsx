@@ -1,10 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-
-const API_URL = Platform.OS === 'android'
-  ? 'http://10.0.2.2:8000/api/auth'   // Android emulator loopback
-  : 'http://localhost:8000/api/auth';   // iOS simulator or web
+import { getApiBaseUrl } from '../../lib/api';
 
 const TOKEN_KEY = '@drivelegal_auth_token';
 const USER_KEY  = '@drivelegal_auth_user';
@@ -81,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function loadAndVerify() {
     try {
       const storedToken = await storage.get(TOKEN_KEY);
+      const storedUser  = await storage.get(USER_KEY);
 
       if (!storedToken) {
         // No token stored → not logged in
@@ -88,9 +86,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Restore cached session immediately so app doesn't flash login screen
+      if (storedToken && storedUser) {
+        setToken(storedToken);
+        setUser(JSON.parse(storedUser));
+      }
+
+      // Skip backend verification for local/demo tokens
+      if (storedToken.startsWith('local_') || storedToken.startsWith('demo_')) {
+        console.log('[Auth] Local/demo token, skipping server verify.');
+        setIsLoading(false);
+        return;
+      }
+
       // Verify the token is still valid by hitting /me
       console.log('[Auth] Verifying stored token...');
-      const res = await fetch(`${API_URL}/me`, {
+      const baseUrl = getApiBaseUrl();
+      const res = await fetch(`${baseUrl}/api/auth/me`, {
         headers: { Authorization: `Bearer ${storedToken}` },
       });
 
@@ -101,23 +113,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(storedToken);
         setUser(fetchedUser);
         console.log('[Auth] Token valid – auto logged in as', fetchedUser.email);
-      } else {
-        // Token expired or invalid → clear storage and force login
+      } else if (res.status === 401) {
+        // Token explicitly rejected → clear and force re-login
         console.log('[Auth] Token invalid/expired, clearing session.');
         await storage.remove(TOKEN_KEY);
         await storage.remove(USER_KEY);
+        setToken(null);
+        setUser(null);
       }
+      // Any other HTTP error (500, CORS, etc.) → keep cached session
     } catch (error) {
       // Network error (backend offline) → keep the cached user so the app
       // doesn't log them out just because the server is temporarily down.
-      // Re-validate next time.
       console.warn('[Auth] Could not reach server on startup, using cached session:', error);
-      const storedToken = await storage.get(TOKEN_KEY);
-      const storedUser  = await storage.get(USER_KEY);
-      if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
-      }
     } finally {
       setIsLoading(false);
     }
@@ -154,7 +162,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUser = useCallback(async () => {
     if (!token) return;
     try {
-      const res = await fetch(`${API_URL}/me`, {
+      const baseUrl = getApiBaseUrl();
+      const res = await fetch(`${baseUrl}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -10,13 +10,19 @@ import { useAuth } from './hooks/useAuth';
 export default function OnboardingScreen() {
   const router = useRouter();
   const { initialized, hasCompletedOnboarding, completeOnboarding } = useSettings();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [isReady, setIsReady] = useState(false);
+  // Prevent re-routing if login.tsx already navigated away
+  const hasRedirected = useRef(false);
 
   useEffect(() => {
-    if (!initialized) return;
+    // Wait until both settings and auth are fully loaded
+    if (!initialized || authLoading) return;
+    // Only redirect once — login.tsx handles routing after a fresh login
+    if (hasRedirected.current) return;
 
     if (hasCompletedOnboarding) {
+      hasRedirected.current = true;
       if (isAuthenticated) {
         router.replace('/(tabs)');
       } else {
@@ -26,7 +32,7 @@ export default function OnboardingScreen() {
       // First time → show onboarding
       setIsReady(true);
     }
-  }, [initialized, hasCompletedOnboarding, isAuthenticated]);
+  }, [initialized, authLoading, hasCompletedOnboarding]);
 
   if (!isReady) {
     return (
