@@ -7,16 +7,3 @@
 [build.environment]
   NODE_VERSION = "20"
   CI = "false"
-
-# Proxy API requests to AWS backend (solves HTTPS → HTTP mixed content)
-[[redirects]]
-  from = "/api/*"
-  to = "http://13.50.138.113:8000/api/:splat"
-  status = 200
-  force = true
-
-# SPA fallback — serve index.html for all non-file routes
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
