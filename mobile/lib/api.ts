@@ -17,8 +17,8 @@ export function getApiBaseUrl(): string {
   }
 
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    if (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('netlify.app') || window.location.hostname === 'drivelegal.in') {
-      return 'https://13.50.138.113.nip.io';
+    if (window.location.hostname.includes('netlify.app') || window.location.hostname.includes('vercel.app') || window.location.hostname === 'drivelegal.in') {
+      return ''; // Same-origin: let the Netlify proxy forward /api/* to EC2
     }
   }
 

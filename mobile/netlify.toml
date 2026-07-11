@@ -23,7 +23,6 @@
 # ── Environment Variables (set these in Netlify Dashboard → Site → Environment) ──
 [build.environment]
   NODE_VERSION = "20"
-  EXPO_PUBLIC_API_URL = "/api"
 
 # ── API Proxy ────────────────────────────────────────────────────────────────
 # Forward /api/* to the AWS backend (avoids CORS & mixed-content issues)
