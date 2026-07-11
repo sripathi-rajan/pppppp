@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, Body, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime
 from pydantic import BaseModel, Field
@@ -28,6 +28,7 @@ from backend.modules.rules.loader import RulesLoader
 from backend.modules.geofencing.engine import GeofencingEngine
 from backend.modules.sync.router import router as sync_router
 from backend.auth import router as auth_router
+from backend.admin import router as admin_router
 
 class UTF8JSONResponse(JSONResponse):
     """Preserve ₹ and other Unicode in JSON responses."""
@@ -336,11 +337,23 @@ _BRIEFS_CACHE = {"data": None, "timestamp": 0}
 def get_briefs():
     """
     Fetch live news about Indian traffic rules/road safety, and use Ollama/Gemini to summarize.
+    Prepends any admin-pinned/custom briefs from the admin panel.
     """
+    import glob as _glob
+    _custom_briefs_path = os.path.join(DATA_DIR, "custom_briefs.json")
+    custom_briefs = []
+    if os.path.exists(_custom_briefs_path):
+        try:
+            with open(_custom_briefs_path, "r", encoding="utf-8") as _f:
+                custom_briefs = json.load(_f)
+        except Exception:
+            pass
+
     global _BRIEFS_CACHE
     now = time.time()
     if _BRIEFS_CACHE["data"] and (now - _BRIEFS_CACHE["timestamp"]) < 3600:
-        return {"status": "ok", "briefs": _BRIEFS_CACHE["data"]}
+        merged = custom_briefs + [b for b in _BRIEFS_CACHE["data"] if b.get("id") not in {c["id"] for c in custom_briefs}]
+        return {"status": "ok", "briefs": merged}
 
     try:
         url = "https://news.google.com/rss/search?q=india+traffic+rules+OR+road+safety&hl=en-IN&gl=IN&ceid=IN:en"
@@ -692,7 +705,18 @@ def get_notifications(
     add("tip_day_{}".format(day), "Traffic Tip: {}".format(tip_title),
         tip_body, "info", "bulb", "#FEF3C7", "#B45309", "Ask DriveLegal", "/(tabs)/ask")
 
-    return {"status": "ok", "notifications": result, "generated_at": now.isoformat()}
+    # Prepend any admin-pushed custom notifications
+    _custom_notifs_path = os.path.join(DATA_DIR, "custom_notifications.json")
+    custom_notifs = []
+    if os.path.exists(_custom_notifs_path):
+        try:
+            with open(_custom_notifs_path, "r", encoding="utf-8") as _f:
+                custom_notifs = json.load(_f)
+        except Exception:
+            pass
+
+    all_notifications = custom_notifs + result
+    return {"status": "ok", "notifications": all_notifications, "generated_at": now.isoformat()}
 
 
 @app.get("/health")
@@ -719,6 +743,22 @@ app.include_router(sync_router)
 
 # ── Auth router (for user authentication) -------------------------------------
 app.include_router(auth_router)
+
+# ── Admin router (for admin panel) --------------------------------------------
+app.include_router(admin_router)
+
+# Serve report images for admin panel
+_reports_dir = os.path.join(os.path.dirname(__file__), "reports")
+if os.path.exists(_reports_dir):
+    app.mount("/api/admin/report-images", StaticFiles(directory=_reports_dir), name="report_images")
+
+@app.get("/admin", include_in_schema=False)
+@app.get("/admin/", include_in_schema=False)
+async def serve_admin_panel():
+    admin_html = os.path.join(os.path.dirname(os.path.dirname(__file__)), "admin", "index.html")
+    if os.path.exists(admin_html):
+        return FileResponse(admin_html, media_type="text/html")
+    return {"error": "Admin panel not found. Ensure admin/index.html exists."}
 
 @app.get("/api/signs")
 def get_traffic_signs():

@@ -1,0 +1,13 @@
+{
+    "id": "REP-73682",
+    "type": "infrastructure",
+    "typeLabel": "Pothole/Road",
+    "location": "42, Viswanathapuram",
+    "description": "",
+    "vehicle_number": "BXJSB",
+    "timestamp": "2026-05-29T16:54:26.935Z",
+    "image_file": "REP-73682.jpg",
+    "status": "unverified",
+    "fine_amount": 0,
+    "rule_section": "N/A"
+}
