@@ -39,7 +39,18 @@ function RootNavigator() {
 
   useEffect(() => {
     if (isLoading) return;
-  }, [isLoading]);
+
+    const isOnLogin = segments[0] === 'login';
+    const isInTabs = segments[0] === '(tabs)';
+
+    if (!isAuthenticated && !isOnLogin) {
+      // Not logged in and not already on login → send to login
+      router.replace('/login');
+    } else if (isAuthenticated && isOnLogin) {
+      // Logged in but landed on login page → send to app
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated, isLoading, segments]);
 
   // Show a blank splash while we're resolving the auth state from storage
   if (isLoading) {

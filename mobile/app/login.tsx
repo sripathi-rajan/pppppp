@@ -139,7 +139,7 @@ export default function LoginScreen() {
       if (!meRes.ok) throw new Error(userData.detail || 'Profile fetch failed');
       
       await authLogin(token, userData);
-      router.replace('/(tabs)');
+      // Navigation is handled by the auth guard in _layout.tsx
       
     } catch (err: any) {
       console.error('[Google Login] Error:', err);
@@ -161,7 +161,7 @@ export default function LoginScreen() {
         createdAt: new Date().toISOString(),
       };
       await authLogin(token, userData);
-      router.replace('/(tabs)');
+      // Navigation is handled by the auth guard in _layout.tsx
     } catch (err) {
       console.error(err);
     } finally {
@@ -323,7 +323,7 @@ export default function LoginScreen() {
       }
 
       await authLogin(token!, userData);
-      router.replace('/(tabs)');
+      // Navigation is handled by the auth guard in _layout.tsx
     } catch (err: any) {
       console.error('[Login] Error:', err);
       setFormError(err.message || 'Something went wrong. Please try again.');
