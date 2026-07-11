@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>DriveLegal Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #F8F7F4; /* Light cream background from screenshot */
+      --surface: #FFFFFF;
+      --border: #E8E6E1;
+      
+      --text-main: #1C1C1C;
+      --text-muted: #6B7280;
+      --text-light: #9CA3AF;
+      
+      --orange: #D97706; /* The main orange */
+      --orange-dark: #C2410C;
+      --orange-bg: #FEF3C7;
+      
+      --red: #DC2626;
+      --red-bg: #FEF2F2;
+      
+      --radius-sm: 8px;
+      --radius: 12px;
+      --radius-lg: 20px;
+      --radius-xl: 24px;
+      
+      --shadow: 0 4px 20px rgba(0,0,0,0.05);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 70px; /* Space for bottom nav */
+    }
+
+    /* ════════════════════════════════════════════════════════════════════
+       LOGIN SCREEN
+    ════════════════════════════════════════════════════════════════════ */
+    #login-screen {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 9999; padding: 20px;
+    }
+    .demo-pill {
+      position: absolute; top: 20px; left: 20px;
+      background: #F1F5F9; color: #475569;
+      padding: 6px 12px; border-radius: 20px;
+      font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px;
+    }
+    .login-container {
+      width: 100%; max-width: 400px; text-align: center;
+    }
+    .dl-logo-wrap { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 24px; }
+    .dl-icon { width: 36px; height: 36px; background: #1C1C1C; color: var(--orange); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
+    .dl-text { font-size: 20px; font-weight: 800; }
+    .login-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+    .login-sub { font-size: 14px; color: var(--text-muted); margin-bottom: 32px; }
+    
+    .btn-outline {
+      width: 100%; padding: 14px; background: #fff; border: 1px solid var(--border);
+      border-radius: 12px; font-size: 14px; font-weight: 600; color: var(--text-main);
+      display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 24px; cursor: pointer;
+    }
+    .divider {
+      display: flex; align-items: center; gap: 12px; color: var(--text-light); font-size: 12px; margin-bottom: 24px;
+    }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    
+    .input-wrap { position: relative; margin-bottom: 16px; }
+    .input-wrap i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-light); }
+    .input-wrap input {
+      width: 100%; padding: 14px 16px 14px 44px;
+      border: 1px solid var(--border); border-radius: 12px;
+      font-size: 14px; outline: none; transition: border .2s;
+    }
+    .input-wrap input:focus { border-color: var(--orange); }
+    
+    .btn-login {
+      width: 100%; padding: 14px; background: #D97706; color: #fff;
+      border: none; border-radius: 12px; font-size: 15px; font-weight: 700;
+      margin-top: 8px; cursor: pointer; transition: all .2s;
+      box-shadow: 0 4px 12px rgba(217,119,6,0.2);
+    }
+    .btn-login:hover { background: #C2410C; box-shadow: 0 6px 16px rgba(217,119,6,0.3); }
+    .btn-login:active { transform: scale(0.98); }
+    .login-footer { margin-top: 24px; font-size: 13px; color: var(--text-muted); }
+
+    /* ════════════════════════════════════════════════════════════════════
+       APP SHELL & NAVIGATION
+    ════════════════════════════════════════════════════════════════════ */
+    #app-shell { display: none; max-width: 1200px; margin: 0 auto; padding: 20px; }
+    
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #FFFFFF; border-top: 1px solid var(--border);
+      display: flex; justify-content: space-around; padding: 10px 0 20px 0;
+      z-index: 100;
+    }
+    .nav-item {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      color: var(--text-light); font-size: 11px; font-weight: 600; cursor: pointer;
+      flex: 1; transition: color 0.2s;
+    }
+    .nav-item i { font-size: 20px; margin-bottom: 2px; transition: transform 0.2s; }
+    .nav-item:hover { color: var(--text-muted); }
+    .nav-item:active i { transform: scale(0.9); }
+    .nav-item.active { color: var(--orange); }
+
+    .section { display: none; animation: fadeIn 0.2s ease; }
+    .section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ════════════════════════════════════════════════════════════════════
+       UI COMPONENTS (Cards matching the screenshot)
+    ════════════════════════════════════════════════════════════════════ */
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
+    
+    .card-solid {
+      background: var(--orange); color: #fff;
+      border-radius: var(--radius-xl); padding: 24px;
+      box-shadow: 0 4px 12px rgba(217,119,6,0.2);
+    }
+    .card-solid .c-icon {
+      width: 40px; height: 40px; background: rgba(255,255,255,0.2);
+      border-radius: 20px; display: flex; align-items: center; justify-content: center;
+      margin-bottom: 30px; font-size: 18px;
+    }
+    .card-solid .c-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .card-solid .c-sub { font-size: 12px; opacity: 0.9; }
+
+    .card-light {
+      background: #FFFFFF; border-radius: var(--radius-xl); padding: 24px;
+      box-shadow: var(--shadow); border: 1px solid rgba(0,0,0,0.02);
+      cursor: pointer; transition: transform 0.1s;
+    }
+    .card-light:active { transform: scale(0.98); }
+    .card-light .c-icon {
+      width: 40px; height: 40px; background: var(--orange-bg); color: var(--orange);
+      border-radius: 12px; display: flex; align-items: center; justify-content: center;
+      margin-bottom: 24px; font-size: 18px;
+    }
+    .card-light.c-purple .c-icon { background: #F3E8FF; color: #9333EA; }
+    .card-light.c-red .c-icon { background: #FEE2E2; color: #EF4444; }
+    .card-light.c-green .c-icon { background: #D1FAE5; color: #10B981; }
+    .card-light.c-blue .c-icon { background: #DBEAFE; color: #3B82F6; }
+    
+    .card-light .c-title { font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; }
+    .card-light .c-sub { font-size: 12px; color: var(--text-muted); }
+
+    .section-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin: 32px 0 16px;
+    }
+    .section-title { font-size: 18px; font-weight: 700; }
+    .section-action { color: var(--orange); font-size: 13px; font-weight: 600; cursor: pointer; }
+
+    /* SOS style alert bar */
+    .alert-bar {
+      background: var(--red-bg); border-radius: var(--radius-lg); padding: 20px;
+      display: flex; align-items: center; gap: 16px; margin-bottom: 24px;
+    }
+    .alert-icon { width: 44px; height: 44px; background: #FEE2E2; color: var(--red); border-radius: 22px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .alert-text { flex: 1; }
+    .alert-title { font-size: 16px; font-weight: 700; color: #991B1B; margin-bottom: 2px; }
+    .alert-sub { font-size: 13px; color: var(--red); }
+    
+    /* List items (Reports, Users, Briefs) */
+    .list-item {
+      background: #FFFFFF; border-radius: var(--radius-lg); padding: 16px;
+      margin-bottom: 12px; display: flex; align-items: flex-start; gap: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: 1px solid var(--border);
+    }
+    .li-img { width: 50px; height: 50px; border-radius: 10px; object-fit: cover; background: #F1F5F9; display: flex; align-items: center; justify-content: center; color: var(--text-light); }
+    .li-content { flex: 1; min-width: 0; }
+    .li-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 8px; }
+    .li-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
+    .li-meta { font-size: 11px; color: var(--text-light); }
+    
+    /* Status Badges */
+    .badge { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .b-unverified { background: #FEF3C7; color: #B45309; }
+    .b-verified { background: #D1FAE5; color: #059669; }
+    .b-action_taken { background: #F3E8FF; color: #7E22CE; }
+    .b-rejected { background: #FEE2E2; color: #DC2626; }
+
+    /* Forms & Buttons */
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+    .form-control { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; font-size: 14px; font-family: inherit; outline: none; transition: border-color 0.2s; }
+    .form-control:focus { border-color: var(--orange); }
+    textarea.form-control { min-height: 80px; resize: vertical; }
+
+    .btn { padding: 14px 20px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn:active { transform: scale(0.98); }
+    .btn-block { width: 100%; }
+    
+    .btn-primary { background: var(--orange); color: #fff; box-shadow: 0 4px 12px rgba(217,119,6,0.2); }
+    .btn-primary:hover { background: var(--orange-dark); box-shadow: 0 6px 16px rgba(217,119,6,0.3); }
+    
+    .btn-secondary { background: #F1F5F9; color: var(--text-main); }
+    .btn-secondary:hover { background: #E2E8F0; }
+    
+    .btn-danger { background: #FEF2F2; color: #DC2626; }
+    .btn-danger:hover { background: #FEE2E2; color: #B91C1C; }
+    
+    /* Top Bar */
+    .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .top-greeting { font-size: 22px; font-weight: 800; }
+    .top-sub { font-size: 14px; color: var(--text-muted); }
+    .top-action { width: 40px; height: 40px; background: #fff; border-radius: 20px; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); cursor: pointer; transition: all 0.2s; }
+    .top-action:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.1); transform: translateY(-2px); }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: flex-end; justify-content: center; z-index: 2000; }
+    .modal-overlay.open { display: flex; }
+    .modal-content { background: #fff; width: 100%; max-width: 600px; border-radius: 24px 24px 0 0; padding: 24px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-close { width: 32px; height: 32px; background: #F1F5F9; border-radius: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; }
+    
+    .detail-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .detail-label { color: var(--text-muted); font-weight: 500; }
+    .detail-val { font-weight: 600; text-align: right; }
+
+    /* Floating Action Button */
+    .fab { position: fixed; bottom: 90px; right: 20px; width: 56px; height: 56px; border-radius: 28px; background: var(--orange); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 12px rgba(217,119,6,0.3); cursor: pointer; z-index: 90; }
+
+    /* Filter pills */
+    .pill-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 16px; scrollbar-width: none; }
+    .pill-scroll::-webkit-scrollbar { display: none; }
+    .pill { padding: 8px 16px; background: #fff; border: 1px solid var(--border); border-radius: 20px; font-size: 13px; font-weight: 600; color: var(--text-muted); white-space: nowrap; cursor: pointer; transition: all 0.2s; }
+    .pill:hover { border-color: var(--text-light); }
+    .pill.active { background: #1C1C1C; color: #fff; border-color: #1C1C1C; }
+
+    .toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 3000; display: flex; flex-direction: column; gap: 8px; width: 90%; max-width: 400px; }
+    .toast { background: #1C1C1C; color: #fff; padding: 14px 20px; border-radius: 12px; font-size: 14px; font-weight: 500; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    
+    .loader { display: none; position: fixed; inset: 0; background: rgba(248,247,244,0.7); z-index: 1500; align-items: center; justify-content: center; }
+    .loader.active { display: flex; }
+    .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--orange); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    .img-zoom { position: fixed; inset: 0; background: #000; z-index: 2500; display: none; align-items: center; justify-content: center; }
+    .img-zoom.open { display: flex; }
+    .img-zoom img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+    .img-zoom-close { position: absolute; top: 20px; right: 20px; color: #fff; font-size: 24px; cursor: pointer; padding: 10px; }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen">
+    <div class="demo-pill"><i class="fa fa-shield-alt"></i> System Administration</div>
+    <div class="login-container">
+      <div class="dl-logo-wrap">
+        <div class="dl-icon">DL</div>
+        <div class="dl-text">DriveLegal</div>
+      </div>
+      <div class="login-title">Welcome Back</div>
+      <div class="login-sub">Secure administrative access</div>
+      
+      <div class="input-wrap">
+        <i class="fa fa-lock"></i>
+        <input type="password" id="admin-secret" placeholder="Admin Secret" autocomplete="current-password" />
+      </div>
+      
+      <button class="btn-login" onclick="login()">Log In</button>
+      
+      <div class="login-footer">
+        Admin Token: <b>drivelegal-admin-2025</b>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP SHELL -->
+  <div id="app-shell">
+    
+    <!-- DASHBOARD SECTION -->
+    <div id="sec-dashboard" class="section active">
+      <div class="top-header">
+        <div>
+          <div class="top-greeting">System Dashboard</div>
+          <div class="top-sub">Administrative Overview</div>
+        </div>
+        <div class="top-action" onclick="logout()"><i class="fa fa-sign-out-alt"></i></div>
+      </div>
+      
+      <div class="alert-bar">
+        <div class="alert-icon"><i class="fa fa-exclamation-triangle"></i></div>
+        <div class="alert-text">
+          <div class="alert-title" id="stat-pending">0 Pending Reports</div>
+          <div class="alert-sub">Pending administrative review</div>
+        </div>
+        <i class="fa fa-chevron-right" style="color:#FCA5A5"></i>
+      </div>
+
+      <div class="grid">
+        <div class="card-solid" onclick="nav('reports')">
+          <div class="c-icon"><i class="fa fa-flag"></i></div>
+          <div class="c-title" id="stat-reports">--</div>
+          <div class="c-sub">Total Incident Reports</div>
+        </div>
+        <div class="card-light c-blue" onclick="nav('users')">
+          <div class="c-icon"><i class="fa fa-users"></i></div>
+          <div class="c-title" id="stat-users">--</div>
+          <div class="c-sub">Registered Users</div>
+        </div>
+        <div class="card-light c-green" onclick="nav('content')">
+          <div class="c-icon"><i class="fa fa-newspaper"></i></div>
+          <div class="c-title" id="stat-briefs">--</div>
+          <div class="c-sub">Active Bulletins</div>
+        </div>
+        <div class="card-light c-red" onclick="nav('content')">
+          <div class="c-icon"><i class="fa fa-bell"></i></div>
+          <div class="c-title" id="stat-notifs">--</div>
+          <div class="c-sub">Active Notifications</div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">Recent Reports</div>
+        <div class="section-action" onclick="nav('reports')">See all</div>
+      </div>
+      <div id="recent-reports-list"></div>
+    </div>
+
+    <!-- REPORTS SECTION -->
+    <div id="sec-reports" class="section">
+      <div class="top-header">
+        <div class="top-greeting">Reports</div>
+        <div class="top-action" onclick="loadReports()"><i class="fa fa-sync"></i></div>
+      </div>
+
+      <div class="pill-scroll">
+        <div class="pill active" onclick="filterReports('all', this)">All</div>
+        <div class="pill" onclick="filterReports('unverified', this)">Pending</div>
+        <div class="pill" onclick="filterReports('verified', this)">Verified</div>
+        <div class="pill" onclick="filterReports('action_taken', this)">Action Taken</div>
+        <div class="pill" onclick="filterReports('rejected', this)">Rejected</div>
+      </div>
+      
+      <div style="margin-bottom: 16px;">
+        <select id="type-filter" class="form-control" onchange="applyFilters()">
+          <option value="">All Categories</option>
+          <option value="traffic">Traffic Violations</option>
+          <option value="parking">Illegal Parking</option>
+          <option value="accident">Accidents</option>
+          <option value="infrastructure">Infrastructure</option>
+        </select>
+      </div>
+
+      <div id="reports-list"></div>
+    </div>
+
+    <!-- USERS SECTION -->
+    <div id="sec-users" class="section">
+      <div class="top-header">
+        <div class="top-greeting">Users</div>
+        <div class="top-action" onclick="loadUsers()"><i class="fa fa-sync"></i></div>
+      </div>
+      <div id="users-list"></div>
+    </div>
+
+    <!-- CONTENT SECTION (News & Alerts) -->
+    <div id="sec-content" class="section">
+      <div class="top-header">
+        <div class="top-greeting">Communications</div>
+        <div class="top-action" onclick="loadContent()"><i class="fa fa-sync"></i></div>
+      </div>
+
+      <div class="pill-scroll">
+        <div class="pill active" onclick="switchContentTab('news', this)">Bulletins</div>
+        <div class="pill" onclick="switchContentTab('alerts', this)">System Alerts</div>
+      </div>
+
+      <!-- News Briefs Tab -->
+      <div id="tab-news">
+        <button class="btn btn-primary btn-block" style="margin-bottom: 24px; padding: 18px; font-size: 16px;" onclick="openBriefModal()">
+          <i class="fa fa-plus-circle"></i> Create Bulletin
+        </button>
+        <div class="section-header">
+          <div class="section-title">Active Bulletins</div>
+        </div>
+        <div id="briefs-list"></div>
+      </div>
+
+      <!-- Alerts Tab -->
+      <div id="tab-alerts" style="display:none;">
+        <button class="btn btn-danger btn-block" style="margin-bottom: 24px; padding: 18px; font-size: 16px; background: #EF4444; color: #fff;" onclick="openNotifModal()">
+          <i class="fa fa-bell"></i> Broadcast Alert
+        </button>
+        <div class="section-header">
+          <div class="section-title">Active Notifications</div>
+        </div>
+        <div id="notifs-list"></div>
+      </div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION -->
+    <nav class="bottom-nav">
+      <div class="nav-item active" id="nav-dashboard" onclick="nav('dashboard')">
+        <i class="fa fa-home"></i><span>Home</span>
+      </div>
+      <div class="nav-item" id="nav-reports" onclick="nav('reports')">
+        <i class="fa fa-flag"></i><span>Reports</span>
+      </div>
+      <div class="nav-item" id="nav-users" onclick="nav('users')">
+        <i class="fa fa-user"></i><span>Users</span>
+      </div>
+      <div class="nav-item" id="nav-content" onclick="nav('content')">
+        <i class="fa fa-bullhorn"></i><span>Comms</span>
+      </div>
+    </nav>
+  </div>
+
+  <!-- MODALS -->
+
+  <!-- Report Detail Modal -->
+  <div class="modal-overlay" id="report-modal" onclick="if(event.target===this)closeModal('report-modal')">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="section-title">Report Details</div>
+        <button class="modal-close" onclick="closeModal('report-modal')"><i class="fa fa-times"></i></button>
+      </div>
+      <div id="report-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Create Brief Modal -->
+  <div class="modal-overlay" id="brief-modal" onclick="if(event.target===this)closeModal('brief-modal')">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="section-title">New Bulletin</div>
+        <button class="modal-close" onclick="closeModal('brief-modal')"><i class="fa fa-times"></i></button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Title</label>
+        <input type="text" id="b-title" class="form-control" placeholder="e.g. Traffic rules updated" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea id="b-desc" class="form-control" placeholder="Bulletin content..."></textarea>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="createBrief()">Publish Bulletin</button>
+    </div>
+  </div>
+
+  <!-- Create Notif Modal -->
+  <div class="modal-overlay" id="notif-modal" onclick="if(event.target===this)closeModal('notif-modal')">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="section-title">Global Notification</div>
+        <button class="modal-close" onclick="closeModal('notif-modal')"><i class="fa fa-times"></i></button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Title</label>
+        <input type="text" id="n-title" class="form-control" placeholder="e.g. Highway Blocked" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Message</label>
+        <textarea id="n-body" class="form-control" placeholder="Notification body..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Type</label>
+        <select id="n-type" class="form-control">
+          <option value="alert">Alert (Red)</option>
+          <option value="warning">Warning (Yellow)</option>
+          <option value="info">Info (Blue)</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="createNotif()">Broadcast Alert</button>
+    </div>
+  </div>
+
+  <!-- Utilities -->
+  <div class="img-zoom" id="img-zoom" onclick="this.classList.remove('open')">
+    <div class="img-zoom-close"><i class="fa fa-times"></i></div>
+    <img id="img-zoom-img" src="" />
+  </div>
+
+  <div class="toast-container" id="toasts"></div>
+  <div class="loader" id="loader"><div class="spinner"></div></div>
+
+  <script>
+    const API = window.location.origin;
+    let SECRET = '';
+    let ALL_REPORTS = [];
+    let STATUS_F = 'all';
+    let CUR_REPORT_ID = null;
+
+    // --- Auth ---
+    function login() {
+      const s = document.getElementById('admin-secret').value.trim();
+      if(!s) return toast('Enter secret');
+      SECRET = s;
+      document.getElementById('loader').classList.add('active');
+      apiFetch('/api/admin/analytics')
+        .then(() => {
+          document.getElementById('login-screen').style.display = 'none';
+          document.getElementById('app-shell').style.display = 'block';
+          loadDash();
+        })
+        .catch(() => { SECRET=''; toast('Invalid secret'); })
+        .finally(() => document.getElementById('loader').classList.remove('active'));
+    }
+
+    function logout() {
+      SECRET='';
+      document.getElementById('app-shell').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('admin-secret').value = '';
+    }
+
+    // --- API & Navigation ---
+    async function apiFetch(path, opts={}) {
+      const res = await fetch(API+path, {
+        ...opts, headers:{'Content-Type':'application/json','X-Admin-Secret':SECRET,...(opts.headers||{})}
+      });
+      if (!res.ok) throw new Error('API Error');
+      return res.json();
+    }
+
+    function nav(id) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('sec-'+id).classList.add('active');
+      document.getElementById('nav-'+id).classList.add('active');
+      
+      if(id==='dashboard') loadDash();
+      if(id==='reports') loadReports();
+      if(id==='users') loadUsers();
+      if(id==='content') loadContent();
+      window.scrollTo(0,0);
+    }
+
+    // --- Dashboard ---
+    async function loadDash() {
+      try {
+        const d = await apiFetch('/api/admin/analytics');
+        document.getElementById('stat-reports').textContent = d.total_reports;
+        document.getElementById('stat-users').textContent = d.total_users;
+        document.getElementById('stat-briefs').textContent = d.active_briefs;
+        document.getElementById('stat-notifs').textContent = d.active_notifications;
+        
+        const pending = d.status_breakdown?.unverified || 0;
+        document.getElementById('stat-pending').textContent = pending + ' Pending Reports';
+        
+        renderReportList('recent-reports-list', (d.recent_reports||[]).slice(0,5));
+      } catch(e) { toast('Error loading dashboard'); }
+    }
+
+    // --- Reports ---
+    async function loadReports() {
+      document.getElementById('loader').classList.add('active');
+      try {
+        const d = await apiFetch('/api/admin/reports');
+        ALL_REPORTS = d.reports || [];
+        applyFilters();
+      } catch(e) { toast('Error loading reports'); }
+      finally { document.getElementById('loader').classList.remove('active'); }
+    }
+
+    function filterReports(status, el) {
+      STATUS_F = status;
+      el.parentElement.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+      el.classList.add('active');
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const t = document.getElementById('type-filter').value;
+      let f = ALL_REPORTS;
+      if (STATUS_F !== 'all') f = f.filter(r => r.status === STATUS_F);
+      if (t) f = f.filter(r => r.type === t);
+      renderReportList('reports-list', f);
+    }
+
+    function renderReportList(containerId, list) {
+      const c = document.getElementById(containerId);
+      if(!list.length) { c.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">No reports found</div>'; return; }
+      c.innerHTML = list.map(r => {
+        const img = r.has_image ? `<img src="${API}/api/admin/report-images/${r.image_file}" class="li-img">` : `<div class="li-img"><i class="fa fa-image"></i></div>`;
+        return `
+        <div class="list-item" onclick="openReport('${r.id}')">
+          ${img}
+          <div class="li-content">
+            <div class="li-title">${r.typeLabel||r.type} <span class="badge b-${r.status}">${statusFmt(r.status)}</span></div>
+            <div class="li-sub">${r.location||'Unknown location'}</div>
+            <div class="li-meta">${new Date(r.timestamp).toLocaleDateString()}</div>
+          </div>
+          <i class="fa fa-chevron-right" style="color:#D1D5DB; margin-top:16px;"></i>
+        </div>`;
+      }).join('');
+    }
+
+    async function openReport(id) {
+      CUR_REPORT_ID = id;
+      const b = document.getElementById('report-modal-body');
+      b.innerHTML = '<div style="text-align:center;padding:20px;">Loading...</div>';
+      document.getElementById('report-modal').classList.add('open');
+      try {
+        const r = await apiFetch('/api/admin/reports/'+id);
+        b.innerHTML = `
+          ${r.has_image ? `<img src="${API}/api/admin/report-images/${r.image_file}" style="width:100%;height:200px;object-fit:cover;border-radius:16px;margin-bottom:16px;" onclick="zoomImg(this.src)">` : ''}
+          <div class="detail-row"><span class="detail-label">ID</span><span class="detail-val">${r.id}</span></div>
+          <div class="detail-row"><span class="detail-label">Type</span><span class="detail-val">${r.typeLabel||r.type}</span></div>
+          <div class="detail-row"><span class="detail-label">Location</span><span class="detail-val">${r.location||'N/A'}</span></div>
+          <div class="detail-row"><span class="detail-label">Vehicle</span><span class="detail-val">${r.vehicle_number||'N/A'}</span></div>
+          <div class="detail-row"><span class="detail-label">Fine</span><span class="detail-val" style="color:var(--orange)">₹${r.fine_amount||0}</span></div>
+          
+          <div class="form-group" style="margin-top:20px;">
+            <label class="form-label">Status</label>
+            <select id="update-status" class="form-control">
+              <option value="unverified" ${r.status==='unverified'?'selected':''}>Pending</option>
+              <option value="verified" ${r.status==='verified'?'selected':''}>Verified</option>
+              <option value="action_taken" ${r.status==='action_taken'?'selected':''}>Action Taken</option>
+              <option value="rejected" ${r.status==='rejected'?'selected':''}>Rejected</option>
+            </select>
+          </div>
+          <div class="modal-actions" style="margin-top:24px; display:flex; gap:12px;">
+            <button class="btn btn-primary" style="flex:2;" onclick="saveStatus()">Save Changes</button>
+            <button class="btn btn-danger" style="flex:1; padding: 14px 0;" onclick="delReport()"><i class="fa fa-trash"></i></button>
+          </div>
+        `;
+      } catch(e) { b.innerHTML = 'Error loading'; }
+    }
+
+    async function saveStatus() {
+      const s = document.getElementById('update-status').value;
+      try {
+        await apiFetch('/api/admin/reports/'+CUR_REPORT_ID+'/status', {method:'PATCH',body:JSON.stringify({status:s,admin_note:''})});
+        toast('Status updated'); closeModal('report-modal'); loadReports();
+      } catch(e) { toast('Error saving'); }
+    }
+    
+    async function delReport() {
+      if(!confirm('Delete?')) return;
+      try {
+        await apiFetch('/api/admin/reports/'+CUR_REPORT_ID, {method:'DELETE'});
+        toast('Deleted'); closeModal('report-modal'); loadReports();
+      } catch(e) { toast('Error deleting'); }
+    }
+
+    // --- Users ---
+    async function loadUsers() {
+      document.getElementById('loader').classList.add('active');
+      try {
+        const d = await apiFetch('/api/admin/users');
+        const list = d.users || [];
+        const c = document.getElementById('users-list');
+        if(!list.length) { c.innerHTML='<div style="text-align:center;padding:40px;">No users</div>'; return; }
+        c.innerHTML = list.map(u => `
+          <div class="list-item">
+            <div class="li-img" style="border-radius:25px;background:var(--orange-bg);color:var(--orange);font-weight:700;font-size:18px;">${(u.name||'?')[0].toUpperCase()}</div>
+            <div class="li-content">
+              <div class="li-title">${u.name||'Unknown'}</div>
+              <div class="li-sub">${u.email||u.phone||'No contact'}</div>
+              <div class="li-meta">Joined ${new Date(u.createdAt).toLocaleDateString()}</div>
+            </div>
+          </div>
+        `).join('');
+      } catch(e) { toast('Error loading users'); }
+      finally { document.getElementById('loader').classList.remove('active'); }
+    }
+
+    // --- Content (News & Alerts) ---
+    function switchContentTab(tab, el) {
+      el.parentElement.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById('tab-news').style.display = tab==='news'?'block':'none';
+      document.getElementById('tab-alerts').style.display = tab==='alerts'?'block':'none';
+    }
+
+    async function loadContent() {
+      loadBriefs(); loadNotifs();
+    }
+
+    async function loadBriefs() {
+      try {
+        const d = await apiFetch('/api/admin/briefs');
+        const c = document.getElementById('briefs-list');
+        c.innerHTML = (d.briefs||[]).map(b => `
+          <div class="list-item">
+            <div class="li-icon" style="width:40px;height:40px;background:${b.iconBg};color:${b.iconColor};border-radius:10px;display:flex;align-items:center;justify-content:center;margin-right:12px;"><i class="fa fa-newspaper"></i></div>
+            <div class="li-content">
+              <div class="li-title">${b.title}</div>
+              <div class="li-sub">${b.desc}</div>
+            </div>
+            <i class="fa fa-trash" style="color:#DC2626;padding:8px;" onclick="delBrief('${b.id}')"></i>
+          </div>
+        `).join('');
+      } catch(e) {}
+    }
+
+    async function loadNotifs() {
+      try {
+        const d = await apiFetch('/api/admin/notifications');
+        const c = document.getElementById('notifs-list');
+        c.innerHTML = (d.notifications||[]).map(n => `
+          <div class="list-item">
+            <div class="li-icon" style="width:40px;height:40px;background:#FEF2F2;color:#DC2626;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-right:12px;"><i class="fa fa-bell"></i></div>
+            <div class="li-content">
+              <div class="li-title">${n.title}</div>
+              <div class="li-sub">${n.body}</div>
+            </div>
+            <i class="fa fa-trash" style="color:#DC2626;padding:8px;" onclick="delNotif('${n.id}')"></i>
+          </div>
+        `).join('');
+      } catch(e) {}
+    }
+
+    function openBriefModal() { document.getElementById('brief-modal').classList.add('open'); }
+    function openNotifModal() { document.getElementById('notif-modal').classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+    async function createBrief() {
+      const title = document.getElementById('b-title').value;
+      const desc = document.getElementById('b-desc').value;
+      if(!title||!desc) return toast('Required fields missing');
+      try {
+        await apiFetch('/api/admin/briefs', {method:'POST', body:JSON.stringify({title,desc,icon:'newspaper',iconBg:'#D1FAE5',iconColor:'#10B981',link:''})});
+        closeModal('brief-modal'); loadBriefs(); document.getElementById('b-title').value=''; document.getElementById('b-desc').value='';
+      } catch(e) { toast('Error'); }
+    }
+
+    async function createNotif() {
+      const title = document.getElementById('n-title').value;
+      const body = document.getElementById('n-body').value;
+      if(!title||!body) return toast('Required fields missing');
+      try {
+        await apiFetch('/api/admin/notifications', {method:'POST', body:JSON.stringify({title,body,type:document.getElementById('n-type').value,icon:'bell',iconBg:'#FEE2E2',iconColor:'#DC2626'})});
+        closeModal('notif-modal'); loadNotifs(); document.getElementById('n-title').value=''; document.getElementById('n-body').value='';
+      } catch(e) { toast('Error'); }
+    }
+
+    async function delBrief(id) { if(confirm('Delete?')) { await apiFetch('/api/admin/briefs/'+id,{method:'DELETE'}); loadBriefs(); } }
+    async function delNotif(id) { if(confirm('Delete?')) { await apiFetch('/api/admin/notifications/'+id,{method:'DELETE'}); loadNotifs(); } }
+
+    // --- Utils ---
+    function toast(msg) {
+      const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg;
+      document.getElementById('toasts').appendChild(el);
+      setTimeout(()=>el.remove(),3000);
+    }
+    function statusFmt(s) { return s.replace('_',' '); }
+    function zoomImg(src) { document.getElementById('img-zoom-img').src=src; document.getElementById('img-zoom').classList.add('open'); }
+  </script>
+</body>
+</html>
