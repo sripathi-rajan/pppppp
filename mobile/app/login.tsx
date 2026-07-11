@@ -392,7 +392,7 @@ export default function LoginScreen() {
               {/* Google Button */}
               <TouchableOpacity
                 style={styles.googleButton}
-                onPress={() => promptAsync()}
+                onPress={() => promptAsync({ windowName: Platform.OS === 'web' ? '_self' : undefined })}
                 disabled={!request || isLoading}
                 activeOpacity={0.7}
               >
