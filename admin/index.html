@@ -349,8 +349,9 @@
         <div class="pill" onclick="filterReports('rejected', this)">Rejected</div>
       </div>
       
-      <div style="margin-bottom: 16px;">
-        <select id="type-filter" class="form-control" onchange="applyFilters()">
+      <div style="margin-bottom: 16px; display: flex; gap: 8px;">
+        <input type="text" id="id-filter" class="form-control" placeholder="Search by Report ID..." onkeyup="applyFilters()" style="flex: 2;">
+        <select id="type-filter" class="form-control" onchange="applyFilters()" style="flex: 1;">
           <option value="">All Categories</option>
           <option value="traffic">Traffic Violations</option>
           <option value="parking">Illegal Parking</option>
@@ -579,9 +580,11 @@
 
     function applyFilters() {
       const t = document.getElementById('type-filter').value;
+      const idSearch = document.getElementById('id-filter') ? document.getElementById('id-filter').value.toLowerCase().trim() : '';
       let f = ALL_REPORTS;
       if (STATUS_F !== 'all') f = f.filter(r => r.status === STATUS_F);
       if (t) f = f.filter(r => r.type === t);
+      if (idSearch) f = f.filter(r => String(r.id).toLowerCase().includes(idSearch));
       renderReportList('reports-list', f);
     }
 
