@@ -7,7 +7,8 @@
     "vehicle_number": "",
     "timestamp": "2026-05-29T17:23:22.273Z",
     "image_file": "REP-11087.jpg",
-    "status": "unverified",
+    "status": "rejected",
     "fine_amount": 0,
-    "rule_section": "N/A"
+    "rule_section": "N/A",
+    "updated_at": "2026-07-11T16:41:50.503794"
 }
