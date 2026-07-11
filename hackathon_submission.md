@@ -7,8 +7,8 @@
 ## 🚀 Quick Links for Judges
 * 📱 **Android APK Download:** [Install on Android](https://expo.dev/accounts/dk011/projects/drivelegal-mobile/builds/eae2a1f4-bb4e-4534-8108-147f97887d0d)
 * 🌐 **Live Web App:** [drivelegal.netlify.app](https://drivelegal.netlify.app)
-* ⚙️ **API Interactive Documentation:** [Swagger UI Docs](https://13.61.7.137.nip.io/docs)
-* 📊 **API Health Endpoint:** [Health Check](https://13.61.7.137.nip.io/health)
+* ⚙️ **API Interactive Documentation:** [Swagger UI Docs](https://13.50.138.113.nip.io/docs)
+* 📊 **API Health Endpoint:** [Health Check](https://13.50.138.113.nip.io/health)
 *(Note: To manage cloud hosting budgets, our AWS GPU backend server runs daily from **9:00 AM to 5:00 PM**).*
 
 ---

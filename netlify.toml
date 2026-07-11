@@ -5,12 +5,12 @@
   publish = "dist"
 
 [build.environment]
-  EXPO_PUBLIC_API_URL = "https://13.50.138.113.nip.io"
+  EXPO_PUBLIC_API_URL = "/api"
 
 # Proxy API requests to AWS backend (solves HTTPS → HTTP mixed content)
 [[redirects]]
   from = "/api/*"
-  to = "https://13.50.138.113.nip.io/:splat"
+  to = "http://13.50.138.113:8000/:splat"
   status = 200
   force = true
 
