@@ -1,7 +1,7 @@
 # DriveLegal — Netlify Configuration
 [build]
   base = "mobile"
-  command = "npx expo export --platform web"
+  command = "npm install && npx expo export --platform web"
   publish = "dist"
 
 [build.environment]
