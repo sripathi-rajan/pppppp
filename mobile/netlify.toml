@@ -29,7 +29,7 @@
 # Forward /api/* to the AWS backend (avoids CORS & mixed-content issues)
 [[redirects]]
   from = "/api/*"
-  to = "http://13.50.138.113:8000/:splat"
+  to = "http://13.50.138.113:8000/api/:splat"
   status = 200
   force = true
 
