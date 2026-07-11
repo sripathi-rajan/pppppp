@@ -91,6 +91,20 @@ export default function LoginScreen() {
     }
   }, [response]);
 
+  // Handle Google OAuth implicit-flow callback on web (access_token in URL hash)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const hash = window.location.hash;
+    if (!hash) return;
+    const params = new URLSearchParams(hash.replace(/^#/, ''));
+    const accessToken = params.get('access_token');
+    if (accessToken) {
+      // Clean the URL hash so it doesn't re-trigger on next render
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      handleGoogleLoginSuccess(accessToken);
+    }
+  }, []);
+
   const handleGoogleLoginSuccess = async (accessToken?: string) => {
     if (!accessToken) return;
     setIsLoading(true);
