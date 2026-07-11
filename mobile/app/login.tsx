@@ -71,9 +71,9 @@ export default function LoginScreen() {
   const [formError, setFormError] = useState('');
 
   // GOOGLE SIGN IN SETUP
-  const redirectUri = AuthSession.makeRedirectUri({
-    path: 'login'
-  });
+  const redirectUri = Platform.OS === 'web'
+    ? (typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://drive-legal-tau.vercel.app/login')
+    : AuthSession.makeRedirectUri({ path: 'login' });
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: '836187070362-ujggpiu8ubfdsc6diuji1cfnbiogqdnq.apps.googleusercontent.com',

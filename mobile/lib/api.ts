@@ -16,6 +16,12 @@ export function getApiBaseUrl(): string {
     return envUrl;
   }
 
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    if (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('netlify.app') || window.location.hostname === 'drivelegal.in') {
+      return 'https://13.50.138.113.nip.io';
+    }
+  }
+
   const envHost = process.env.EXPO_PUBLIC_API_HOST?.trim();
   if (envHost) {
     return `http://${envHost}:${API_PORT}`;

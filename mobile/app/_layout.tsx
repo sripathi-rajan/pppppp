@@ -1,4 +1,4 @@
-import { Stack, usePathname, useRouter } from 'expo-router';
+import { Stack, useSegments, useRouter } from 'expo-router';
 import { HistoryProvider } from '../hooks/useHistory';
 import { SettingsProvider } from '../hooks/useSettings';
 import { AuthProvider, useAuth } from './hooks/useAuth';
@@ -34,29 +34,23 @@ export default function RootLayout() {
 
 function RootNavigator() {
   const { isAuthenticated, isLoading } = useAuth();
-  const { hasCompletedOnboarding, initialized } = useSettings();
-  const pathname = usePathname();
+  const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoading || !initialized) return;
+    if (isLoading) return;
 
-    // Use pathname instead of segments for more reliable matching
-    const isOnAuthGroup = pathname.startsWith('/(tabs)') || pathname === '/location' || pathname === '/vehicle';
-    const isOnLogin = pathname === '/login';
-    const isOnboarding = pathname === '/';
+    const isOnLogin = segments[0] === 'login';
+    const isInTabs = segments[0] === '(tabs)';
 
-    if (!isAuthenticated && isOnAuthGroup) {
-      // Trying to access protected route without auth → login
+    if (!isAuthenticated && !isOnLogin) {
+      // Not logged in and not already on login → send to login
       router.replace('/login');
-    } else if (isAuthenticated && (isOnLogin || isOnboarding)) {
-      // Logged in but on auth screens → tabs
+    } else if (isAuthenticated && isOnLogin) {
+      // Logged in but landed on login page → send to app
       router.replace('/(tabs)');
-    } else if (!isAuthenticated && isOnboarding && hasCompletedOnboarding) {
-       // Completed onboarding but not logged in → login
-       router.replace('/login');
     }
-  }, [isAuthenticated, isLoading, initialized, pathname, hasCompletedOnboarding]);
+  }, [isAuthenticated, isLoading, segments]);
 
   // Show a blank splash while we're resolving the auth state from storage
   if (isLoading) {
