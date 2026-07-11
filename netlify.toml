@@ -6,6 +6,8 @@
 
 [build.environment]
   EXPO_PUBLIC_API_URL = "/api"
+  NODE_VERSION = "20"
+  CI = "false"
 
 # Proxy API requests to AWS backend (solves HTTPS → HTTP mixed content)
 [[redirects]]
