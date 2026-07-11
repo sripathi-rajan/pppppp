@@ -5,6 +5,9 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import { Platform, View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
+import * as WebBrowser from 'expo-web-browser';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function RootLayout() {
   return (

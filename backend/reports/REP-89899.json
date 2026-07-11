@@ -7,7 +7,8 @@
     "vehicle_number": "BXJSB",
     "timestamp": "2026-05-29T16:54:29.709Z",
     "image_file": "REP-89899.jpg",
-    "status": "unverified",
+    "status": "action_taken",
     "fine_amount": 0,
-    "rule_section": "N/A"
+    "rule_section": "N/A",
+    "updated_at": "2026-07-11T16:41:36.102704"
 }

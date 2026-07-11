@@ -72,7 +72,7 @@ export default function LoginScreen() {
 
   // GOOGLE SIGN IN SETUP
   const redirectUri = AuthSession.makeRedirectUri({
-    // scheme: 'your-app-scheme' // usually unnecessary for expo go / web
+    path: 'login'
   });
 
   const [request, response, promptAsync] = Google.useAuthRequest({
@@ -343,6 +343,24 @@ export default function LoginScreen() {
       >
         <Ionicons name="flash" size={14} color="#6b7280" />
         <Text style={styles.demoButtonText}>Demo Login</Text>
+      </TouchableOpacity>
+
+      {/* Admin Login Button (Top Right) */}
+      <TouchableOpacity 
+        style={styles.adminButton} 
+        onPress={() => {
+          const url = `${getApiBaseUrl()}/admin`;
+          if (Platform.OS === 'web') {
+            window.open(url, '_blank');
+          } else {
+            WebBrowser.openBrowserAsync(url);
+          }
+        }}
+        disabled={isLoading}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="settings-outline" size={14} color="#6b7280" />
+        <Text style={styles.demoButtonText}>Admin</Text>
       </TouchableOpacity>
 
       <KeyboardAvoidingView
@@ -711,6 +729,20 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 16,
     left: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    zIndex: 10,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  adminButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f3f4f6',
