@@ -832,7 +832,7 @@ const styles = StyleSheet.create({
   },
   mainLayout: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     overflow: 'hidden',
   },
   sidebarDesktop: {

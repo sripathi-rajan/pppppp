@@ -7,32 +7,6 @@ from .query_classifier import QueryIntent
 from .config import config
 from .models import SourceAnswer
 
-def format_answer_professional(text: str) -> str:
-    lines = text.split('\n')
-    formatted_lines = []
-    
-    for line in lines:
-        stripped = line.strip()
-        if not stripped:
-            formatted_lines.append('')
-            continue
-        if re.match(r'^#{1,3}\s*\d+\.', stripped):
-            clean_title = re.sub(r'^#{1,3}\s*', '', stripped)
-            formatted_lines.append(f'→ {clean_title.upper()}')
-        elif re.match(r'^#{1,3}\s+', stripped) and not re.match(r'^#{1,3}\s*\d+', stripped):
-            clean_sub = re.sub(r'^#{1,3}\s*', '', stripped)
-            formatted_lines.append(f'   **{clean_sub}**')
-        elif stripped.startswith('**') and stripped.endswith('**'):
-            formatted_lines.append(f'   {stripped}')
-        elif stripped.startswith('•') or stripped.startswith('-') or stripped.startswith('*'):
-            formatted_lines.append(f'   {stripped}')
-        else:
-            if len(stripped) < 60 and stripped.endswith(':') and not stripped.startswith('→'):
-                formatted_lines.append(f'   **{stripped}**')
-            else:
-                formatted_lines.append(f'   {stripped}')
-    return '\n'.join(formatted_lines)
-
 class SmartSynthesizer:
     
     def __init__(self):
@@ -42,37 +16,40 @@ class SmartSynthesizer:
         )
         self.model_name = config.SYNTHESIZER_MODEL
     
-    async def synthesize(
-        self,
-        raw_evaluation: Dict,
-        user_question: str,
-        query_intent: QueryIntent,
-        all_sources: List[SourceAnswer]
-    ) -> Dict[str, Any]:
+    async def synthesize(self, raw_evaluation, user_question, query_intent, all_sources):
+        # Convert all_sources (list of SourceAnswer) into the dictionary format expected by the logic
+        sources_data = {
+            'db_answers': [s for s in all_sources if s.source.value == 'db'],
+            'ollama_answer': next((s for s in all_sources if s.source.value == 'ollama'), None),
+            'google_answers': [s for s in all_sources if s.source.value == 'google'],
+            'coverage_score': len([s for s in all_sources if len(str(s.answer)) > 50]) / 3.0
+        }
         
-        internal_confidence = self._calculate_internal_confidence(raw_evaluation)
-        coverage_score = len([s for s in all_sources if len(str(s.answer)) > 50]) / 3.0
+        avg_score = self._calculate_internal_confidence(raw_evaluation)
+        coverage = sources_data.get('coverage_score', 1.0)
         
-        print(f"[INFO] Internal Metrics:")
-        print(f"   Confidence: {internal_confidence}")
-        print(f"   Coverage: {coverage_score:.0%}")
+        print(f"\n[SYNTHESIZER] Internal Score: {avg_score:.2f}, Coverage: {coverage:.0%}")
         
-        if query_intent == QueryIntent.BROAD_EDUCATIONAL:
-            print("[INFO] Broad query detected - generating comprehensive guide...")
-            final_answer = await self._enhance_with_general_knowledge(
-                raw_evaluation, user_question, all_sources
-            )
-            display_mode = "educational_comprehensive"
+        has_db = len(sources_data.get('db_answers', [])) > 0
+        has_ollama = sources_data.get('ollama_answer') is not None
+        has_google = len(sources_data.get('google_answers', [])) > 0
+        
+        print(f"[SYNTHESIZER] Data available: DB={has_db}, Ollama={has_ollama}, Google={has_google}")
+        
+        if has_db and has_ollama:
+            print("[SYNTHESIZER] Using full synthesis (DB + Ollama)")
+            final_answer = await self._synthesize_full(raw_evaluation, sources_data, user_question, query_intent)
+        elif has_google:
+            print("[SYNTHESIZER] Using web-enhanced synthesis")
+            final_answer = await self._synthesize_from_web_enhanced(sources_data, user_question, query_intent)
+        elif has_db:
+            print("[SYNTHESIZER] Using DB-only expansion")
+            final_answer = await self._synthesize_db_expanded(sources_data, user_question, query_intent)
         else:
-            print("[INFO] Specific query detected - synthesizing direct answer...")
-            final_answer = await self._synthesize_specific_answer(
-                user_question, all_sources
-            )
-            display_mode = "authoritative" if internal_confidence >= 0.8 else "helpful_cautious"
+            print("[SYNTHESIZER] Using fallback generation")
+            final_answer = await self._synthesize_fallback(user_question, query_intent)
             
-            # Add helpful footer for medium confidence specific queries
-            if internal_confidence < 0.8:
-                final_answer += "\n\n---\n[INFO] **Want to verify?**\nFor the most current penalty amounts in your specific state, check **parivahan.gov.in** or your local RTO."
+        final_answer = self._ensure_formatting(final_answer, query_intent)
         
         urls = []
         for s in all_sources:
@@ -83,22 +60,20 @@ class SmartSynthesizer:
             final_answer += "\n\n**References:**\n"
             for u in urls:
                 final_answer += f"• {u}\n"
-
-        formatted_answer = format_answer_professional(final_answer)
         
-        output = {
-            "answer": formatted_answer,
-            "display_mode": display_mode,
-            "_internal_metrics": {
-                "confidence_level": internal_confidence,
-                "coverage_score": coverage_score,
-                "sources_used": len(all_sources),
-                "recommendation": self._get_recommendation(internal_confidence, coverage_score)
+        if not final_answer.endswith('!'):
+            final_answer += "\n\n---\n💡 For complete details: parivahan.gov.in | mParivahan app | Local RTO\n🛡️ Drive safely! Your family wants you home alive."
+            
+        return {
+            "answer": final_answer,
+            "display_mode": "authoritative" if avg_score >= 0.7 else "helpful_cautious",
+            "_internal": {
+                "avg_score": avg_score,
+                "coverage": coverage,
+                "strategy_used": f"DB={has_db}+Ollama={has_ollama}+Google={has_google}"
             }
         }
         
-        return output
-    
     def _calculate_internal_confidence(self, eval_result: Dict) -> float:
         evaluations = eval_result.get("evaluation", {})
         if not evaluations:
@@ -114,114 +89,83 @@ class SmartSynthesizer:
         
         avg_score = sum(scores) / len(scores)
         return avg_score / 10.0
-    
-    async def _enhance_with_general_knowledge(
-        self,
-        eval_result: Dict,
-        question: str,
-        sources: List[SourceAnswer]
-    ) -> str:
         
-        partial_info = "\n".join([str(s.answer) for s in sources])
+    async def _synthesize_full(self, eval_result, sources, question, intent):
+        partial_info = ""
+        for s in sources.get("db_answers", []):
+            partial_info += str(s.answer) + "\n"
+        if sources.get("ollama_answer"):
+            partial_info += str(sources["ollama_answer"].answer) + "\n"
+            
+        prompt = f"""USER ASKED: "{question}"
+        Here is data from DB and AI:
+        {partial_info[:1500]}
+        Synthesize a direct, helpful answer using ONLY this data."""
+        return await self._call_local_llm(prompt)
         
-        enhancement_prompt = f"""The user asked: "{question}"
+    async def _synthesize_from_web_enhanced(self, sources, question, intent):
+        google_text = "\n".join([
+            f"- {str(r.answer)[:400]}" 
+            for r in sources.get("google_answers", [])[:5]
+        ])
+        
+        enhancement_prompt = f"""You are a traffic law educator for India.
 
-We have SOME information from our database, but it's incomplete. Here's what we have:
+USER ASKED: "{question}"
 
-{partial_info[:1000]}
+We found information from web searches:
+{google_text}
 
-TASK: Create a COMPREHENSIVE answer that:
-1. Uses the information above where available
-2. FILLS IN GAPS using your general knowledge of Indian traffic rules (MV Act 1988, CMVR)
-3. Covers AT LEAST these major topics if not already covered:
-   - Speed limits (city vs highway)
-   - Traffic signals and signs
-   - Helmet and seatbelt requirements
-   - Lane discipline and overtaking
-   - Parking rules
-   - Drunk driving penalties
-   - Document requirements (License, RC, Insurance, PUC)
-
-MANDATORY FORMATTING - FOLLOW EXACTLY:
-MAIN SECTIONS (use arrow format):
-→ 1. SECTION TITLE HERE
-   [content continues on next line with indent]
-
-SUBTITLES (use bold):
-**Subtitle Name Here**
-[explanation after]
-
-IMPORTANT KEY FACTS/NUMBERS (use bold):
-**Key fact or important number here**
-[context]
-
-BULLET POINTS (for lists):
-• First point
-• Second point
-
-EXAMPLE OF CORRECT FORMAT:
+TASK: Create a comprehensive, professional answer following this EXACT format:
 
 → 1. SPEED LIMITS
-   **Posted Limits:** Always follow the posted speed limit signs.
-   • If no sign visible, use default speed for that road type
-   
-   **Variable Speed Limits:** Some areas use digital signs that change based on traffic/weather.
-   • These digital limits are legally binding!
-   
-   **Critical Rule:** You must drive slower than the posted limit if conditions are hazardous.
-   • Heavy rain, fog, ice, or heavy pedestrian traffic = slow down!
+   **Posted Limits:** [Extract from web info]
+   • Residential areas: [info]
+   • Highways: [info]
 
-DO NOT USE:
-[X] ### Headings
-[X] ## Headings  
-[X] _Italics_ for emphasis (use bold instead)
-[X] Excessive emojis (keep it professional)
+→ 2. TRAFFIC SIGNALS
+   **Red Light Rules:** [info]
+   • Yellow light meaning: [info]
 
-Total length: 600-900 words covering ALL requested topics."""
+→ 3. HELMET & SEATBELT RULES
+   **Helmet Requirements:** [info]
+   • Fine amounts: [info]
 
-        return await self._call_llm_for_enhancement(enhancement_prompt)
-    
-    def _pick_best_source(self, eval_result: Dict, sources: List[SourceAnswer]) -> SourceAnswer:
-        evaluations = eval_result.get("evaluation", {})
-        best_source_name = "google"
-        highest_score = -1
+→ 4. LANE DISCIPLINE
+   **Overtaking Rules:** [info]
+
+→ 5. PARKING REGULATIONS
+   **No-Parking Zones:** [info]
+
+→ 6. DRUNK DRIVING LAWS
+   **BAC Limits:** [info]
+   **Penalties:** [info]
+
+→ 7. REQUIRED DOCUMENTS
+   **Must Carry:** [info]
+
+IMPORTANT FORMATTING RULES:
+- Use → arrows for main sections (NOT ###)
+- Use **bold** for subheadings (NOT ##)
+- Use • bullets for details
+- Include specific numbers/fines where mentioned
+- End with safety reminder
+
+Length: 700-1000 words"""
+
+        answer = await self._call_local_llm(enhancement_prompt)
+        return answer if answer else google_text
         
-        for name, data in evaluations.items():
-            if isinstance(data, dict) and data.get("score", 0) > highest_score:
-                highest_score = data.get("score", 0)
-                best_source_name = name
-                
-        for s in sources:
-            if s.source.value == best_source_name:
-                return s
-        return sources[0] if sources else None
-
-    async def _synthesize_specific_answer(self, question: str, sources: List[SourceAnswer]) -> str:
-        partial_info = "\n".join([str(s.answer) for s in sources])
-        prompt = f"""The user asked a specific traffic rule question: "{question}"
-
-Here is the raw data retrieved from our database and web search:
-{partial_info[:2000]}
-
-TASK: Synthesize a direct, professional, and highly accurate answer to the user's question using ONLY the provided data.
-- DO NOT output raw search results like "DuckDuckGo Search Results:".
-- Write a coherent, helpful response.
-- Use bolding for important numbers (like fines or sections).
-- Do not add information not present in the sources.
-"""
-        return await self._call_llm_for_enhancement(prompt)
-    
-    def _get_recommendation(self, confidence: float, coverage: float) -> str:
-        if confidence >= 0.8 and coverage >= 0.8:
-            return "EXCELLENT - Ready to display"
-        elif coverage < 0.5:
-            return "IMPROVE - Expand knowledge base for this topic"
-        elif confidence < 0.6:
-            return "REVIEW - Verify data accuracy"
-        else:
-            return "ACCEPTABLE - Minor enhancements possible"
-            
-    async def _call_llm_for_enhancement(self, prompt: str) -> str:
+    async def _synthesize_db_expanded(self, sources, question, intent):
+        db_text = "\n".join([str(s.answer) for s in sources.get("db_answers", [])])
+        prompt = f"USER ASKED: {question}\nDB DATA: {db_text}\nExpand this strictly based on DB facts."
+        return await self._call_local_llm(prompt)
+        
+    async def _synthesize_fallback(self, question, intent):
+        prompt = f"USER ASKED: {question}\nAnswer directly based on general knowledge of Indian traffic laws."
+        return await self._call_local_llm(prompt)
+        
+    async def _call_local_llm(self, prompt: str) -> str:
         try:
             response = await self.client.chat.completions.create(
                 model=self.model_name,
@@ -235,4 +179,31 @@ TASK: Synthesize a direct, professional, and highly accurate answer to the user'
             return response.choices[0].message.content
         except Exception as e:
             print(f"Error calling DeepSeek Synthesizer API: {e}")
-            return "An error occurred while generating the comprehensive guide."
+            return "An error occurred while generating the guide."
+            
+    def _ensure_formatting(self, answer, intent):
+        if '→' in answer or '**' in answer:
+            return answer
+            
+        lines = answer.split('\n')
+        formatted = []
+        
+        section_num = 1
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                formatted.append('')
+                continue
+            
+            if re.match(r'^\d+\.', stripped) or (len(stripped) < 50 and ':' in stripped):
+                if not stripped.startswith('→'):
+                    if re.match(r'^\d+\.', stripped):
+                        formatted.append(f'→ {stripped.upper()}')
+                        section_num += 1
+                    else:
+                        formatted.append(f'   **{stripped}**')
+                    continue
+            
+            formatted.append(f'   {stripped}')
+        
+        return '\n'.join(formatted)

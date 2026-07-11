@@ -1,7 +1,6 @@
 import asyncio
 import json
 from typing import List, Dict, Any, Optional
-from duckduckgo_search import DDGS
 from openai import AsyncOpenAI
 
 from .models import SourceAnswer, SourceType
@@ -114,8 +113,18 @@ class SourceAggregator:
                 query = f"India traffic rules comprehensive guide {metadata.get('categories_needed', [''])[0]}"
                 
             def sync_search():
-                with DDGS() as ddgs:
-                    return list(ddgs.text(query, max_results=3))
+                try:
+                    from duckduckgo_search import DDGS
+                    with DDGS() as ddgs:
+                        return list(ddgs.text(query, max_results=3))
+                except ImportError:
+                    try:
+                        from ddgs import DDGS
+                        with DDGS() as ddgs:
+                            return list(ddgs.text(query, max_results=3))
+                    except ImportError:
+                        print("[WARN] DuckDuckGo not available, skipping web search")
+                        return []
             
             results = await asyncio.to_thread(sync_search)
             

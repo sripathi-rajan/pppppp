@@ -2,6 +2,7 @@ import asyncio
 from typing import Dict, Any
 
 from .query_classifier import QueryClassifier, QueryIntent
+from .query_classifier_enhanced import EnhancedQueryClassifier
 from .source_aggregator import SourceAggregator
 from .judge_llm import JudgeLLM
 from .synthesizer import SmartSynthesizer
@@ -12,31 +13,47 @@ class TrafficPolicyChatbot:
     Never shows weakness to users
     Uses general knowledge fallback
     """
-    
+
     MAX_ITERATIONS = 3
     
     def __init__(self, fine_lookup=None, rules_loader=None):
-        self.classifier = QueryClassifier()
+        self.classifier = EnhancedQueryClassifier()
         self.aggregator = SourceAggregator(fine_lookup, rules_loader)
         self.judge = JudgeLLM()
         self.synthesizer = SmartSynthesizer()
         
         print("[INFO] DriveLegal FIXED initialized")
-        print("   - Query classification: ENABLED")
+        print("   - Enhanced Query classification: ENABLED")
         print("   - Broad query handling: ENABLED")
         print("   - Scope-aware judging: ENABLED")
         print("   - Smart confidence handling: ENABLED")
     
     async def process_query(self, user_question: str) -> Dict[str, Any]:
-        """
-        Main entry point - now handles ANY query type correctly
-        """
-        
         print(f"\n{'='*60}")
         print(f"PROCESSING: {user_question[:60]}...")
         print(f"{'='*60}")
         
-        intent, metadata = self.classifier.classify(user_question)
+        intent_info = self.classifier.classify(user_question)
+        
+        # Handle greetings immediately
+        if intent_info.get("_should_respond") == False:
+            return {
+                "answer": "Hello! I'm DriveLegal, your AI traffic law assistant.\n\nI can help you with:\n\n→ Traffic fines and penalties\n→ Helmet & seatbelt rules\n→ Speed limits by zone\n→ Drunk driving laws\n→ Parking regulations\n→ Document requirements\n\nWhat would you like to know? Ask me any traffic law question!",
+                "metadata": {
+                    "query_type": "greeting",
+                    "iterations_used": 0,
+                    "architecture": "local_first_privacy_preserved"
+                }
+            }
+            
+        intent_str = intent_info['intent_type']
+        
+        # Map string back to QueryIntent enum to maintain compatibility with existing judge/synthesizer
+        if intent_str == "broad_edu" or intent_str == "general_query":
+            intent = QueryIntent.BROAD_EDUCATIONAL
+        else:
+            intent = QueryIntent.SPECIFIC_RULE
+            
         print(f"\n[INFO] Step 1: Intent = {intent.value}")
         
         sources = await self.aggregator.fetch_all_sources(user_question)
@@ -49,6 +66,12 @@ class TrafficPolicyChatbot:
             current_iteration=1
         )
         
+        # CRITICAL FIX: Don't let scope mismatch kill simple queries!
+        if judge_result.get("fatal_flaw_detected") and intent_str == "general_query":
+            print("[WARN] Scope flaw detected but query is general - relaxing check")
+            judge_result["fatal_flaw_detected"] = False
+            judge_result["needs_research"] = False
+            
         if judge_result.get("fatal_flaw_detected"):
             print("[INFO] Fatal flaw detected - triggering research...")
             sources = await self._retry_with_corrected_scope(
@@ -62,8 +85,14 @@ class TrafficPolicyChatbot:
             all_sources=sources
         )
         
+        final_answer = final_output["answer"]
+        
+        # Apply formatting fix
+        if not final_answer.startswith("→") and not final_answer.startswith("**Hello"):
+            final_answer = self._apply_professional_formatting(final_answer, intent.value)
+            
         result = {
-            "answer": final_output["answer"],
+            "answer": final_answer,
             "display_mode": final_output["display_mode"],
             "metadata": {
                 "query_type": intent.value,
@@ -88,3 +117,46 @@ class TrafficPolicyChatbot:
                 user_question=question + " [FORCE COMPREHENSIVE]"
             )
         return await self.aggregator.fetch_all_sources(question)
+
+    def _apply_professional_formatting(self, answer: str, intent_type: str) -> str:
+        """
+        Apply → arrows, **bold**, • bullets formatting
+        """
+        import re
+        
+        lines = answer.split('\n')
+        formatted_lines = []
+        
+        for line in lines:
+            stripped = line.strip()
+            
+            if not stripped:
+                formatted_lines.append('')
+                continue
+            
+            # Convert ### headings → → arrows
+            if re.match(r'^#{1,3}\s*\d+\.', stripped):
+                clean_title = re.sub(r'^#{1,3}\s*', '', stripped)
+                formatted_lines.append(f'→ {clean_title.upper()}')
+            
+            # Convert ## subtitles → **bold**
+            elif re.match(r'^#{1,3}\s+', stripped) and not re.match(r'^#{1,3}\s*\d+', stripped):
+                clean_sub = re.sub(r'^#{1,3}\s*', '', stripped)
+                formatted_lines.append(f'   **{clean_sub}**')
+            
+            # Keep existing bold
+            elif stripped.startswith('**') and stripped.endswith('**'):
+                formatted_lines.append(f'   {stripped}')
+            
+            # Keep bullets
+            elif stripped.startswith('•') or stripped.startswith('-'):
+                formatted_lines.append(f'   {stripped}')
+            
+            # Regular content - detect subtitles (short, ends with colon)
+            elif len(stripped) < 60 and stripped.endswith(':') and not stripped.startswith('→'):
+                formatted_lines.append(f'   **{stripped}**')
+            
+            else:
+                formatted_lines.append(f'   {stripped}')
+        
+        return '\n'.join(formatted_lines)
