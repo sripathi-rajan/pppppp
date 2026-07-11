@@ -91,21 +91,6 @@ export default function LoginScreen() {
     }
   }, [response]);
 
-  // Handle Google OAuth implicit-flow callback on web (access_token in URL hash)
-  useEffect(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-    const hash = window.location.hash;
-    if (!hash) return;
-    const params = new URLSearchParams(hash.replace(/^#/, ''));
-    const accessToken = params.get('access_token');
-    if (accessToken) {
-      // Clean the URL hash so it doesn't re-trigger on next render
-      window.history.replaceState(null, '', window.location.pathname + window.location.search);
-      handleGoogleLoginSuccess(accessToken);
-    }
-  }, []);
-
-
   const handleGoogleLoginSuccess = async (accessToken?: string) => {
     if (!accessToken) return;
     setIsLoading(true);
@@ -409,19 +394,17 @@ export default function LoginScreen() {
                 style={styles.googleButton}
                 onPress={() => {
                   if (Platform.OS === 'web') {
-                    // On web, expo-web-browser always opens a popup regardless of monkey-patching.
-                    // Build the Google OAuth URL manually and do a full-page redirect instead.
-                    const clientId = '836187070362-ujggpiu8ubfdsc6diuji1cfnbiogqdnq.apps.googleusercontent.com';
-                    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://drive-legal-tau.vercel.app';
-                    const redirectUriWeb = `${origin}/login`;
-                    const params = new URLSearchParams({
-                      client_id: clientId,
-                      redirect_uri: redirectUriWeb,
-                      response_type: 'token',
-                      scope: 'openid email profile',
-                      include_granted_scopes: 'true',
+                    // Expo's WebBrowser ALWAYS forces a popup due to passing 'features' to window.open.
+                    // We monkey-patch window.open temporarily to force a full-page redirect instead.
+                    const originalOpen = window.open;
+                    window.open = ((url: any, name: any, features: any) => {
+                      window.location.href = url;
+                      return window;
+                    }) as any;
+                    
+                    promptAsync().finally(() => {
+                      window.open = originalOpen;
                     });
-                    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
                   } else {
                     promptAsync();
                   }
