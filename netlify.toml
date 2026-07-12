@@ -4,6 +4,30 @@
   command = "npm install && npx expo export -c --platform web && mkdir -p dist/admin && cp ../admin/index.html dist/admin/index.html"
   publish = "dist"
 
+# Proxy API requests to AWS backend (solves HTTPS → HTTP mixed content)
+[[redirects]]
+  from = "/api/*"
+  to = "http://13.50.138.113/:splat"
+  status = 200
+  force = true
+
+# Explicit rule for admin dashboard
+[[redirects]]
+  from = "/admin/*"
+  to = "/admin/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin"
+  to = "/admin/index.html"
+  status = 200
+
+# SPA fallback — serve index.html for all non-file routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
 [build.environment]
   NODE_VERSION = "20"
   CI = "false"
