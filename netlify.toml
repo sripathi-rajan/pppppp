@@ -1,23 +1,13 @@
 # DriveLegal — Netlify Configuration
 [build]
   base = "mobile"
+<<<<<<< HEAD
   command = "npm install && npx expo export --platform web && mkdir -p dist/admin && cp ../admin/index.html dist/admin/index.html"
+=======
+  command = "npx expo export -c --platform web"
+>>>>>>> 3e68c7c77dfa43b5469b04c1918f307e3991a6cb
   publish = "dist"
 
 [build.environment]
-  EXPO_PUBLIC_API_URL = "/api"
   NODE_VERSION = "20"
   CI = "false"
-
-# Proxy API requests to AWS backend (solves HTTPS → HTTP mixed content)
-[[redirects]]
-  from = "/api/*"
-  to = "http://13.50.138.113/:splat"
-  status = 200
-  force = true
-
-# SPA fallback — serve index.html for all non-file routes
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200

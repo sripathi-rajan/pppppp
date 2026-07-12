@@ -39,7 +39,21 @@ function RootNavigator() {
 
   useEffect(() => {
     if (isLoading) return;
-  }, [isLoading]);
+
+    const isAtHomepage = segments.length === 0 || segments[0] === 'index';
+    const isAtLogin = segments[0] === 'login';
+
+    if (!isAuthenticated && !isAtHomepage && !isAtLogin) {
+      // Not logged in and trying to access protected routes → send to login
+      router.replace('/login');
+    } else if (isAuthenticated && isAtLogin) {
+      // Logged in but landed on login page → send to app
+      router.replace('/(tabs)');
+    } else if (isAuthenticated && isAtHomepage) {
+      // Logged in and landed on homepage (onboarding) → send to app
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated, isLoading, segments]);
 
   // Show a blank splash while we're resolving the auth state from storage
   if (isLoading) {

@@ -13,7 +13,14 @@ const API_PORT = process.env.EXPO_PUBLIC_API_PORT ?? '8000';
 export function getApiBaseUrl(): string {
   const envUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
   if (envUrl) {
-    return envUrl;
+    // Prevent double /api prefix if the env var was set to "/api" or "http://host/api"
+    return envUrl.endsWith('/api') ? envUrl.slice(0, -4) : envUrl;
+  }
+
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    if (window.location.hostname.includes('netlify.app') || window.location.hostname.includes('vercel.app') || window.location.hostname === 'drivelegal.in') {
+      return ''; // Same-origin: let the Netlify proxy forward /api/* to EC2
+    }
   }
 
   const envHost = process.env.EXPO_PUBLIC_API_HOST?.trim();

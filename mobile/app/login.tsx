@@ -71,9 +71,9 @@ export default function LoginScreen() {
   const [formError, setFormError] = useState('');
 
   // GOOGLE SIGN IN SETUP
-  const redirectUri = AuthSession.makeRedirectUri({
-    path: 'login'
-  });
+  const redirectUri = Platform.OS === 'web'
+    ? (typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://drive-legal-tau.vercel.app/login')
+    : AuthSession.makeRedirectUri({ path: 'login' });
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: '1069854491436-srkg98fnhte7jhpucig0hod8c4kuhpg5.apps.googleusercontent.com',
@@ -90,6 +90,20 @@ export default function LoginScreen() {
       setFormError(`Google Sign-In Error: ${response.error?.message || 'Unknown error'}`);
     }
   }, [response]);
+
+  // Handle Google OAuth implicit-flow callback on web (access_token in URL hash)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const hash = window.location.hash;
+    if (!hash) return;
+    const params = new URLSearchParams(hash.replace(/^#/, ''));
+    const accessToken = params.get('access_token');
+    if (accessToken) {
+      // Clean the URL hash so it doesn't re-trigger on next render
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      handleGoogleLoginSuccess(accessToken);
+    }
+  }, []);
 
   const handleGoogleLoginSuccess = async (accessToken?: string) => {
     if (!accessToken) return;
@@ -139,7 +153,7 @@ export default function LoginScreen() {
       if (!meRes.ok) throw new Error(userData.detail || 'Profile fetch failed');
       
       await authLogin(token, userData);
-      router.replace('/(tabs)');
+      // Navigation is handled by the auth guard in _layout.tsx
       
     } catch (err: any) {
       console.error('[Google Login] Error:', err);
@@ -161,7 +175,7 @@ export default function LoginScreen() {
         createdAt: new Date().toISOString(),
       };
       await authLogin(token, userData);
-      router.replace('/(tabs)');
+      // Navigation is handled by the auth guard in _layout.tsx
     } catch (err) {
       console.error(err);
     } finally {
@@ -323,7 +337,7 @@ export default function LoginScreen() {
       }
 
       await authLogin(token!, userData);
-      router.replace('/(tabs)');
+      // Navigation is handled by the auth guard in _layout.tsx
     } catch (err: any) {
       console.error('[Login] Error:', err);
       setFormError(err.message || 'Something went wrong. Please try again.');

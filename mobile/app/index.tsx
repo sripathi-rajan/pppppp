@@ -5,28 +5,22 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSettings } from '../hooks/useSettings';
-import { useAuth } from './hooks/useAuth';
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const { initialized, hasCompletedOnboarding, completeOnboarding } = useSettings();
-  const { isAuthenticated } = useAuth();
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     if (!initialized) return;
-
-    if (hasCompletedOnboarding) {
-      if (isAuthenticated) {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/login');
-      }
-    } else {
+    if (!hasCompletedOnboarding) {
       // First time → show onboarding
       setIsReady(true);
+    } else {
+      // If onboarding is done, proceed to login (where _layout.tsx auth guard handles routing)
+      router.replace('/login');
     }
-  }, [initialized, hasCompletedOnboarding, isAuthenticated]);
+  }, [initialized, hasCompletedOnboarding]);
 
   if (!isReady) {
     return (
@@ -35,6 +29,7 @@ export default function OnboardingScreen() {
       </View>
     );
   }
+
 
   return (
     <SafeAreaView style={styles.container}>
