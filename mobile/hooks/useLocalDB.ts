@@ -2,7 +2,14 @@ import * as SQLite from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
-const db = Platform.OS !== 'web' ? (SQLite as any).openDatabase?.('drivelegal.db') : null;
+let db: SQLite.SQLiteDatabase | null = null;
+if (Platform.OS !== 'web') {
+  try {
+    db = SQLite.openDatabaseSync('drivelegal.db');
+  } catch (e) {
+    console.warn('[LocalDB] Failed to open database:', e);
+  }
+}
 
 export interface Fine {
   id: number;
@@ -117,60 +124,41 @@ export const useLocalDB = () => {
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    const init = async () => {
-      try {
-        if (!db) {
-          setInitialized(true);
-          return;
-        }
-        await new Promise<void>((resolve, reject) => {
-          db.transaction((tx: any) => {
-            // Split schema by ; and run each statement
-            SCHEMA.split(';').forEach(stmt => {
-              if (stmt.trim()) {
-                tx.executeSql(stmt, [], () => {}, (_: any, err: any) => {
-                  console.error('Schema error:', err);
-                  return false;
-                });
-              }
-            });
-          }, reject, resolve);
-        });
+    try {
+      if (!db) {
         setInitialized(true);
-      } catch (e) {
-        console.error('Failed to initialize local DB', e);
+        return;
       }
-    };
-    init();
+      // Run each CREATE TABLE statement
+      SCHEMA.split(';').forEach(stmt => {
+        if (stmt.trim()) {
+          try {
+            db!.execSync(stmt);
+          } catch (e) {
+            console.warn('[LocalDB] Schema statement error:', e);
+          }
+        }
+      });
+      setInitialized(true);
+    } catch (e) {
+      console.error('[LocalDB] Failed to initialize:', e);
+      setInitialized(true); // Don't block the app
+    }
   }, []);
 
   const queryFine = async (offence: string, vehicleClass: string, state: string): Promise<Fine | null> => {
     try {
       if (!db) return null;
-      return await new Promise((resolve) => {
-        db.transaction((tx: any) => {
-          tx.executeSql(
-            `SELECT * FROM fines 
-             WHERE offence_code = ? AND vehicle_class = ? AND (state = ? OR state = 'ALL')
-             ORDER BY CASE WHEN state = ? THEN 0 ELSE 1 END
-             LIMIT 1`,
-            [offence, vehicleClass, state, state],
-            (_: any, { rows }: any) => {
-              if (rows.length > 0) {
-                resolve(rows.item(0) as Fine);
-              } else {
-                resolve(null);
-              }
-            },
-            (_: any, err: any) => {
-              console.error('Query fine error:', err);
-              resolve(null);
-              return false;
-            }
-          );
-        });
-      });
+      const rows = db.getAllSync<Fine>(
+        `SELECT * FROM fines 
+         WHERE offence_code = ? AND vehicle_class = ? AND (state = ? OR state = 'ALL')
+         ORDER BY CASE WHEN state = ? THEN 0 ELSE 1 END
+         LIMIT 1`,
+        [offence, vehicleClass, state, state]
+      );
+      return rows.length > 0 ? rows[0] : null;
     } catch (e) {
+      console.warn('[LocalDB] queryFine error:', e);
       return null;
     }
   };
@@ -178,27 +166,13 @@ export const useLocalDB = () => {
   const queryRule = async (ruleId: string): Promise<Rule | null> => {
     try {
       if (!db) return null;
-      return await new Promise((resolve) => {
-        db.transaction((tx: any) => {
-          tx.executeSql(
-            'SELECT * FROM rules WHERE rule_id = ?',
-            [ruleId],
-            (_: any, { rows }: any) => {
-              if (rows.length > 0) {
-                resolve(rows.item(0) as Rule);
-              } else {
-                resolve(null);
-              }
-            },
-            (_: any, err: any) => {
-              console.error('Query rule error:', err);
-              resolve(null);
-              return false;
-            }
-          );
-        });
-      });
+      const rows = db.getAllSync<Rule>(
+        'SELECT * FROM rules WHERE rule_id = ?',
+        [ruleId]
+      );
+      return rows.length > 0 ? rows[0] : null;
     } catch (e) {
+      console.warn('[LocalDB] queryRule error:', e);
       return null;
     }
   };
@@ -206,26 +180,7 @@ export const useLocalDB = () => {
   const getZonesForPoint = async (lat: number, lon: number): Promise<Zone[]> => {
     try {
       if (!db) return [];
-      const allZones: Zone[] = await new Promise((resolve) => {
-        db.transaction((tx: any) => {
-          tx.executeSql(
-            'SELECT * FROM zones',
-            [],
-            (_: any, { rows }: any) => {
-              const res: Zone[] = [];
-              for (let i = 0; i < rows.length; i++) {
-                res.push(rows.item(i) as Zone);
-              }
-              resolve(res);
-            },
-            (_: any, err: any) => {
-              console.error('Get zones error:', err);
-              resolve([]);
-              return false;
-            }
-          );
-        });
-      });
+      const allZones = db.getAllSync<Zone>('SELECT * FROM zones');
 
       return allZones.filter(z => {
         try {
@@ -236,9 +191,11 @@ export const useLocalDB = () => {
         }
       });
     } catch (e) {
+      console.warn('[LocalDB] getZonesForPoint error:', e);
       return [];
     }
   };
 
   return { queryFine, queryRule, getZonesForPoint, initialized };
 };
+
