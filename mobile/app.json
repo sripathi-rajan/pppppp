@@ -64,7 +64,9 @@
           "microphonePermission": "Allow DriveLegal to access your microphone for voice search."
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-sqlite",
+      "expo-status-bar"
     ],
     "scheme": "drivelegal"
   }
