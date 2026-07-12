@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "admin-mobile",
+    "slug": "admin-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dakshankarthic.drivelegaladmin"
+    },
+    "android": {
+      "package": "com.dakshankarthic.drivelegaladmin",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "70876965-5863-4455-879a-a6ebb30f308d"
+      }
+    }
+  }
+}
