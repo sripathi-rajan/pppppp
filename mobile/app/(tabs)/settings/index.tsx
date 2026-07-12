@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSettings } from '../../../hooks/useSettings';
 import { useSync } from '../../../hooks/useSync';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../../hooks/useAuth';
 import { getApiBaseUrl } from '../../../lib/api';
 import * as ImagePicker from 'expo-image-picker';
 

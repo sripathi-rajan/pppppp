@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { getApiBaseUrl } from '../../lib/api';
+import { getApiBaseUrl } from '../lib/api';
 
 const TOKEN_KEY = '@drivelegal_auth_token';
 const USER_KEY  = '@drivelegal_auth_user';

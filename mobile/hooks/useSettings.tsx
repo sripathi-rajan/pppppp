@@ -32,8 +32,8 @@ interface Translations {
 const translations: Translations = {
   // Common
   'back': { en: 'Back', ta: 'பின்னால்', hi: 'पीछे', te: 'వెనుకకు' },
-  'save': { en: 'Save', ta: 'சேமி', hi: 'சहेजें', te: 'సేవ్' },
-  'cancel': { en: 'Cancel', ta: 'ரத்து செய்', hi: 'ரद्द करें', te: 'రద్దు చేయి' },
+  'save': { en: 'Save', ta: 'சேமி', hi: 'सहेजें', te: 'సేవ్' },
+  'cancel': { en: 'Cancel', ta: 'ரத்து செய்', hi: 'रद्द करें', te: 'రద్దు చేయి' },
   'add': { en: 'Add', ta: 'சேர்', hi: 'जोड़ें', te: 'జోడించు' },
   'on': { en: 'On', ta: 'ஆன்', hi: 'चालू', te: 'ఆన్' },
   'off': { en: 'Off', ta: 'ஆஃப்', hi: 'बंद', te: 'ఆఫ్' },
@@ -50,7 +50,7 @@ const translations: Translations = {
   'location_label': { en: 'You are in', ta: 'நீங்கள் இருப்பது', hi: 'आप यहाँ हैं', te: 'మీరు ఇక్కడ ఉన్నారు' },
   'speed': { en: 'SPEED', ta: 'வேகம்', hi: 'गति', te: 'వేగం' },
   'fine_zone': { en: 'FINE ZONE', ta: 'அபராத மண்டலம்', hi: 'जुर्माना क्षेत्र', te: 'జరిమానా ప్రాంతం' },
-  'helmet': { en: 'HELMET', ta: 'தலைக்கவசம்', hi: 'हेல்மெட்', te: 'హెల్మెట్' },
+  'helmet': { en: 'HELMET', ta: 'தலைக்கவசம்', hi: 'हेल्मेट', te: 'హెల్మెట్' },
   'mandatory': { en: 'Mandatory', ta: 'கட்டாயம்', hi: 'अनिवार्य', te: 'తప్పనిసరి' },
   'ask_title': { en: 'Ask DriveLegal', ta: 'டிரைவ்லீகலிடம் கேளுங்கள்', hi: 'DriveLegal से पूछें', te: 'DriveLegal ని అడగండి' },
   'ask_subtitle': { en: 'Plain-language Q&A', ta: 'எளிய மொழி கேள்வி பதில்', hi: 'सरल भाषा प्रश्नोत्तर', te: 'సరళ భాషా ప్రశ్నోత్తరాలు' },
@@ -80,7 +80,7 @@ const translations: Translations = {
   'vehicles': { en: 'Vehicles', ta: 'வாகனங்கள்', hi: 'वाहन', te: 'వాహనాలు' },
   'notifications': { en: 'Notifications', ta: 'அறிவிப்புகள்', hi: 'सूचनाएं', te: 'నోటిఫికేషన్లు' },
   'offline_pack': { en: 'Offline pack', ta: 'ஆஃப்லைன் பேக்', hi: 'ऑफ़लाइन पैक', te: 'ఆఫ్‌లైన్ ప్యాక్' },
-  'privacy_data': { en: 'Privacy & data', ta: 'தனியுரிமை மற்றும் தரவு', hi: 'गोपनीयता और डेटा', te: 'గోప్యత మరియు డేటా' },
+  'privacy_data': { en: 'Privacy & data', ta: 'தனியுரிமை மற்றும் தரவு', hi: 'गोपनीयता और डेटा', te: 'గోప్యత 및 డేటా' },
   'driving_since': { en: 'Personal · Driving since {year}', ta: 'தனிப்பட்ட · {year} முதல் ஓட்டுதல்', hi: 'व्यक्तिगत · {year} से ड्राइविंग', te: 'వ్యక్తిగత · {year} నుండి డ్రైవింగ్' },
   'safe_driver': { en: 'Safe driver', ta: 'பாதுகாப்பான ஓட்டுநர்', hi: 'सुरक्षित ड्राइवर', te: 'సురక్షిత డ్రైవర్' },
 
@@ -89,7 +89,7 @@ const translations: Translations = {
   'select_country': { en: 'Select Country', ta: 'நாட்டைத் தேர்ந்தெடுக்கவும்', hi: 'देश चुनें', te: 'దేశాన్ని ఎంచుకోండి' },
   'select_state': { en: 'Select State / Region', ta: 'மாநிலம் / பகுதியைத் தேர்ந்தெடுக்கவும்', hi: 'राज्य / क्षेत्र चुनें', te: 'రాష్ట్రం / ప్రాంతాన్ని ఎంచుకోండి' },
   'apply_jurisdiction': { en: 'Apply Jurisdiction', ta: 'அதிகார வரம்பை பயன்படுத்து', hi: 'अधिकार क्षेत्र लागू करें', te: 'అధికార పరిధిని వర్తించండి' },
-  'edit_profile': { en: 'Edit Profile', ta: 'சுயவிவரத்தைத் திருத்து', hi: 'प्रोफ़ाइल संपादित करें', te: 'ప్రొఫైల్‌ను सవరించండి' },
+  'edit_profile': { en: 'Edit Profile', ta: 'சுயவிவரத்தைத் திருத்து', hi: 'प्रोफ़ाइल संपादित करें', te: 'ప్రొఫైల్‌ను సవరించండి' },
   'full_name': { en: 'Full Name', ta: 'முழு பெயர்', hi: 'पूरा नाम', te: 'పూర్తి పేరు' },
   'enter_your_name': { en: 'Enter your name', ta: 'உங்கள் பெயரை உள்ளிடவும்', hi: 'अपना नाम दर्ज करें', te: 'మీ పేరు నమోదు చేయండి' },
   'logout': { en: 'Logout', ta: 'வெளியேறு', hi: 'लॉग आउट', te: 'లాగ్ అవుట్ చేయండి' },
@@ -118,7 +118,7 @@ const translations: Translations = {
   'valid_till': { en: 'VALID TILL', ta: 'செல்லுபடியாகும்', hi: 'तक मान्य', te: 'చెల్లుబాటు అయ్యే తేదీ' },
   'verify_extracted_dl': { en: 'Verify Extracted License Details', ta: 'பிரித்தெடுக்கப்பட்ட உரிம விவரங்களை சரிபார்க்கவும்', hi: 'निकाले गए लाइसेंस विवरण सत्यापित करें', te: 'సంగ్రహించిన లైసెన్స్ వివరాలను ధృవీకరించండి' },
   'license_number': { en: 'LICENSE NUMBER', ta: 'உரிம எண்', hi: 'लाइसेंस नंबर', te: 'లైసెన్స్ నంబర్' },
-  'extracted_details': { en: 'EXTRACTED DETAILS', ta: 'பிரித்தெடுக்கப்பட்ட விவரங்கள்', hi: 'निकाले गए विवरण', te: 'సంగ్రహించిన వివరాలు' },
+  'extracted_details': { en: 'EXTRACTED DETAILS', ta: 'பிரித்தெடுக்கப்பட்ட விவரங்கள்', hi: 'निकाले गए विवरण', te: 'సంగ్రహిత వివరాలు' },
   'holder_name': { en: 'HOLDER NAME', ta: 'உரிமையாளர் பெயர்', hi: 'धारक का नाम', te: 'యజమాని పేరు' },
   'fathers_name': { en: 'S/W/D OF', ta: 'தந்தை/கணவர் பெயர்', hi: 'पिता/पति का नाम', te: 'తండ్రి/భర్త పేరు' },
   'dob': { en: 'DOB', ta: 'பிறந்த தேதி', hi: 'जन्म तिथि', te: 'పుట్టిన తేదీ' },
@@ -139,7 +139,7 @@ const translations: Translations = {
   'missing_document': { en: 'Missing Document', ta: 'விடுபட்ட ஆவணம்', hi: 'लापता दस्तावेज़', te: 'పత్రం లేదు' },
   'active': { en: 'Active', ta: 'செயலில்', hi: 'सक्रिय', te: 'క్రియాశీల' },
 
-  // Tabs
+  // Tabs (icons)
   'tab_home': { en: 'Home', ta: 'முகப்பு', hi: 'होम', te: 'హోమ్' },
   'tab_ask': { en: 'Ask', ta: 'கேள்', hi: 'पूछें', te: 'అడగండి' },
   'tab_fines': { en: 'Fines', ta: 'அபராதங்கள்', hi: 'जुर्माना', te: 'జరిమానాలు' },
@@ -151,14 +151,11 @@ const translations: Translations = {
   'helmet_rule_update': { en: 'Helmet rule update', ta: 'ஹெல்மெட் விதி புதுப்பிப்பு', hi: 'हेलमेट नियम अपडेट', te: 'హెల్మెట్ నియమం నవీకరణ' },
   'helmet_rule_desc': { en: 'Tamil Nadu helmet violations can carry a ₹1,000 fine. Verify current state notices before payment.', ta: 'தமிழ்நாட்டில் ஹெல்மெட் விதியை மீறினால் ₹1,000 அபராதம். பணம் செலுத்துவதற்கு முன் தற்போதைய மாநில அறிவிப்புகளை சரிபார்க்கவும்.', hi: 'तमिलनाडु में हेलमेट उल्लंघन पर ₹1,000 का जुर्माना हो सकता है। भुगतान से पहले वर्तमान राज्य नोटिस सत्यापित करें।', te: 'తమిళనాడులో హెల్మెట్ నిబంధనలు ఉల్లంఘిస్తే ₹1,000 జరిమానా విధించవచ్చు. చెల్లించే ముందు ప్రస్తుత రాష్ట్ర నోటీసులను ధృవీకరించండి.' },
   'monsoon_advisory': { en: 'Monsoon advisory', ta: 'பருவமழை ஆலோசனை', hi: 'मानसून सलाह', te: 'రుతుపవనాల సలహా' },
-  'monsoon_desc': { en: 'Hazard lights only when stationary. Reduced visibility warning active.', ta: 'வாகனம் நிற்கும் போது மட்டுமே அபாய விளக்குகள். குறைந்த தெரிவுநிலை எச்சரிக்கை செயலில் உள்ளது.', hi: 'वाहन के स्थिर होने पर ही हैज़र्ड लाइटें जलाएं। कम दृश्यता की चेतावनी सक्रिय है।', te: 'వాహనం ఆగి ఉన్నప్పుడు మాత్రమే ప్రమాద లైట్లు వేయాలి. తక్కువ దృశ్యమానత హెచ్చరిక చురుకుగా ఉంది.' },
+  'monsoon_desc': { en: 'Hazard lights only when stationary. Reduced visibility warning active.', ta: 'வாகனம் நிற்கும் போது மட்டுமே அபாய விளக்குகள். குறைந்த தெரிவுநிலை எச்சரிக்கை செயலில் உள்ளது.', hi: 'वahan के स्थिर होने पर ही हैज़र्ड लाइटें जलाएं। कम दृश्यता की चेतावनी सक्रिय है।', te: 'వాహనం ఆగి ఉన్నప్పుడు మాత్రమే ప్రమాద లైట్లు వేయాలి. తక్కువ దృశ్యమానత హెచ్చరిక చురుకుగా ఉంది.' },
   'speed_enforcement': { en: 'Speed enforcement active', ta: 'வேக கட்டுப்பாடு செயலில் உள்ளது', hi: 'गति प्रवर्तन सक्रिय', te: 'వేగ నియంత్రణ చురుకుగా ఉంది' },
-  'speed_enforcement_desc': { en: 'Radar speed guns deployed on OMR and GST Road Chennai. Keep within 50 km/h limits.', ta: 'சென்னை OMR மற்றும் GST சாலையில் ரேடார் வேக துப்பாக்கிகள் பயன்படுத்தப்பட்டுள்ளன. மணிக்கு 50 கிமீ வேக வரம்பிற்குள் செல்லவும்.', hi: 'OMR और GST रोड चेन्नई पर रडार स्पीड गन तैनात हैं। 50 किमी/घंटा की सीमा के भीतर रहें।', te: 'చెన్నై OMR మరియు GST రోడ్డులో రాడార్ స్పీడ్ గన్స్ మోహరించబడ్డాయి. గంటకు 50 కి.మీ వేగ పరిమితిలో ఉంచండి.' },
+  'speed_enforcement_desc': { en: 'Radar speed guns deployed on OMR and GST Road Chennai. Keep within 50 km/h limits.', ta: 'சென்னை OMR மற்றும் GST சாலையில் ரேடார் வேக துப்பாக்கிகள் பயன்படுத்தப்பட்டுள்ளன. மணிக்கு 50 கிமீ வேக வரம்பிற்குள் செல்லவும்.', hi: 'OMR और GST रोड चेन्नई पर रडार स्पीड गन तैनात हैं। 50 किमी/घंटा की सीमा के भीतर रहें।', te: 'చెన్నై OMR 및 GST రోడ్‌లో రాడార్ స్పీడ్ గన్స్ మోహరించబడ్డాయి. గంటకు 50 కి.మీ వేగ పరిమితిలో ఉంచండి.' },
   'emergency_alert': { en: 'Emergency Contact Alert', ta: 'அவசர தொடர்பு எச்சரிக்கை', hi: 'आपातकालीन संपर्क अलर्ट', te: 'అత్యవసర సంప్రదింపు హెచ్చరిక' },
-  'emergency_desc': { en: 'Saves contact details to auto-SMS your GPS coordinates when SOS is triggered.', ta: 'SOS தூண்டப்படும்போது உங்கள் ஜிபிஎஸ் ஆயத்தொகுப்புகளை தானாக எஸ்எம்எஸ் செய்ய தொடர்பு விவரங்களை சேமிக்கிறது.', hi: 'SOS ट्रिगर होने पर आपके GPS निर्देशांक को ऑटो-SMS करने के लिए संपर्क विवरण सहेजता है।', te: 'SOS ప్రేరేపించబడినప్పుడు మీ GPS కోఆర్డినేట్‌లను ఆటో-SMS చేయడానికి సంప్రదింపు వివరాలను సేవ్ చేస్తుంది.' },
-  'enter_contact_name': { en: 'Enter contact name', ta: 'தொடர்பு பெயரை உள்ளிடவும்', hi: 'संपर्क का नाम दर्ज करें', te: 'సంప్రదింపు పేరును నమోదు చేయండి' },
-  'enter_mobile_number': { en: 'Enter mobile number', ta: 'மொபைல் எண்ணை உள்ளிடவும்', hi: 'मोबाइल नंबर दर्ज करें', te: 'మొబైల్ నంబర్ నమోదు చేయండి' },
-  'save_contact_details': { en: 'Save Contact Details', ta: 'தொடர்பு விவரங்களை சேமி', hi: 'संपर्क विवरण सहेजें', te: 'సంప్రదింపు వివరాలను సేవ్ చేయండి' },
+  'emergency_desc': { en: 'Saves contact details to auto‑SMS your GPS coordinates when SOS is triggered.', ta: 'SOS தூண்டப்படும்போது உங்கள் ஜிபிஎஸ் ஆயத்தொகுப்புகளை தானாக எஸ்எம்எஸ் செய்ய தொடர்பு விவரங்களை சேமிக்கிறது.', hi: 'SOS ट्रिगर होने पर आपके GPS निर्देशांक को ऑटो‑SMS करने के लिए संपर्क विवरण सहेजता है।', te: 'SOS ప్రేరేపించబడినప్పుడు మీ GPS కోఆర్డినేట్‌లను ఆటో‑SMS చేయడానికి సంప్రదింపు వివరాలను సేవ్ చేస్తుంది.' },
 
   // Ask Screen
   'ask_intro': { en: 'Hi there 👋 I\'m your DriveLegal assistant. Ask anything about traffic rules, fines, or paperwork — in plain language.', ta: 'வணக்கம் 👋 நான் உங்கள் டிரைவ்லீகல் உதவியாளர். போக்குவரத்து விதிகள், அபராதங்கள் அல்லது ஆவணங்கள் பற்றி எதையும் கேளுங்கள்.', hi: 'नमस्ते 👋 मैं आपका ड्राइवलीगल सहायक हूँ। यातायात नियमों, जुर्माने, या कागजी कार्रवाई के बारे में कुछ भी पूछें।', te: 'నమస్కారం 👋 నేను మీ డ్రైవ్‌లీగల్ అసిస్టెంట్‌ని. ట్రాఫిక్ నియమాలు, జరిమానాలు లేదా వ్రాతపని గురించి ఏదైనా అడగండి.' },
@@ -192,7 +189,7 @@ const translations: Translations = {
   'schools': { en: 'Schools', ta: 'பள்ளிகள்', hi: 'स्कूल', te: 'పాఠశాలలు' },
   'hospitals': { en: 'Hospitals', ta: 'மருத்துவமனைகள்', hi: 'अस्पताल', te: 'ఆసుపత్రులు' },
   'petrol_pumps': { en: 'Petrol Pumps', ta: 'பெட்ரோல் பம்புகள்', hi: 'पेट्रोल पंप', te: 'పెట్రోల్ పంపులు' },
-  'mechanic_sheds': { en: 'Mechanic Sheds', ta: 'மெக்கானிக் கடைகள்', hi: 'मैकेनिक शेड', te: 'మెకానిక్ షెడ్లు' },
+  'mechanic_sheds': { en: 'Mechanic Sheds', ta: 'மெக்⟐கன் கடைகள்', hi: 'मैकेनिक शेड', te: 'మెకానిక్ షెడ్లు' },
   'general_driving_zone': { en: 'General Driving Zone', ta: 'பொது ஓட்டுநர் மண்டலம்', hi: 'सामान्य ड्राइविंग ज़ोन', te: 'సాధారణ డ్రైవింగ్ జోన్' },
 };
 
@@ -230,7 +227,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [selectedVehicleId, setSelectedVehicleIdState] = useState<string | null>(null);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [initialized, setInitialized] = useState(false);
-
   const [sharedLocation, setSharedLocation] = useState<SharedLocation>({
     latitude: 13.0827,
     longitude: 80.2707,
@@ -257,11 +253,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         setLanguageState(savedLang as Language);
       }
       if (savedProfile) {
-        let parsed = JSON.parse(savedProfile);
+        const parsed = JSON.parse(savedProfile);
         if (parsed.name === 'Driver name') {
           parsed.name = 'Sripathi';
           parsed.avatar = 'S';
-          AsyncStorage.setItem('user_profile', JSON.stringify(parsed));
+          await AsyncStorage.setItem('user_profile', JSON.stringify(parsed));
         }
         setProfileState(parsed);
       }
@@ -312,27 +308,35 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   };
 
   const t = (key: string, params?: Record<string, string>) => {
-    let text = translations[key]?.[language] || translations[key]?.['en'] || key;
+    let text = translations[key]?.[language] ?? translations[key]?.['en'] ?? key;
     if (params) {
       Object.entries(params).forEach(([k, v]) => {
         text = text.replace(`{${k}}`, v);
       });
     }
-    // Handle global params like profile name
     text = text.replace('{name}', profile.name);
     return text;
   };
 
   return (
-    <SettingsContext.Provider value={{ 
-      language, setLanguage, 
-      profile, updateProfile, 
-      notificationsEnabled, setNotificationsEnabled,
-      selectedVehicleId, setSelectedVehicleId,
-      hasCompletedOnboarding, completeOnboarding,
-      t, initialized,
-      sharedLocation, setSharedLocation
-    }}>
+    <SettingsContext.Provider
+      value={{
+        language,
+        setLanguage,
+        profile,
+        updateProfile,
+        notificationsEnabled,
+        setNotificationsEnabled,
+        selectedVehicleId,
+        setSelectedVehicleId,
+        hasCompletedOnboarding,
+        completeOnboarding,
+        t,
+        initialized,
+        sharedLocation,
+        setSharedLocation,
+      }}
+    >
       {children}
     </SettingsContext.Provider>
   );

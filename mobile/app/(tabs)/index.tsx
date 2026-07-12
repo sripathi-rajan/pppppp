@@ -20,7 +20,7 @@ import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { useSettings } from '../../hooks/useSettings';
 import { useCamera } from '../../hooks/useCamera';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../../hooks/useAuth';
 import { getApiBaseUrl } from '../../lib/api';
 
 

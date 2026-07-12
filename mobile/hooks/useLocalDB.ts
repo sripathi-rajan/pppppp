@@ -3,12 +3,17 @@ import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
 let db: SQLite.SQLiteDatabase | null = null;
-if (Platform.OS !== 'web') {
-  try {
-    db = SQLite.openDatabaseSync('drivelegal.db');
-  } catch (e) {
-    console.warn('[LocalDB] Failed to open database:', e);
+
+function getDB() {
+  if (Platform.OS === 'web') return null;
+  if (!db) {
+    try {
+      db = SQLite.openDatabaseSync('drivelegal.db');
+    } catch (e) {
+      console.warn('[LocalDB] Failed to open database:', e);
+    }
   }
+  return db;
 }
 
 export interface Fine {
@@ -125,7 +130,8 @@ export const useLocalDB = () => {
 
   useEffect(() => {
     try {
-      if (!db) {
+      const _db = getDB();
+      if (!_db) {
         setInitialized(true);
         return;
       }
@@ -133,7 +139,7 @@ export const useLocalDB = () => {
       SCHEMA.split(';').forEach(stmt => {
         if (stmt.trim()) {
           try {
-            db!.execSync(stmt);
+            _db.execSync(stmt);
           } catch (e) {
             console.warn('[LocalDB] Schema statement error:', e);
           }
@@ -148,8 +154,9 @@ export const useLocalDB = () => {
 
   const queryFine = async (offence: string, vehicleClass: string, state: string): Promise<Fine | null> => {
     try {
-      if (!db) return null;
-      const rows = db.getAllSync<Fine>(
+      const _db = getDB();
+      if (!_db) return null;
+      const rows = _db.getAllSync<Fine>(
         `SELECT * FROM fines 
          WHERE offence_code = ? AND vehicle_class = ? AND (state = ? OR state = 'ALL')
          ORDER BY CASE WHEN state = ? THEN 0 ELSE 1 END
@@ -165,8 +172,9 @@ export const useLocalDB = () => {
 
   const queryRule = async (ruleId: string): Promise<Rule | null> => {
     try {
-      if (!db) return null;
-      const rows = db.getAllSync<Rule>(
+      const _db = getDB();
+      if (!_db) return null;
+      const rows = _db.getAllSync<Rule>(
         'SELECT * FROM rules WHERE rule_id = ?',
         [ruleId]
       );
@@ -179,8 +187,9 @@ export const useLocalDB = () => {
 
   const getZonesForPoint = async (lat: number, lon: number): Promise<Zone[]> => {
     try {
-      if (!db) return [];
-      const allZones = db.getAllSync<Zone>('SELECT * FROM zones');
+      const _db = getDB();
+      if (!_db) return [];
+      const allZones = _db.getAllSync<Zone>('SELECT * FROM zones');
 
       return allZones.filter(z => {
         try {

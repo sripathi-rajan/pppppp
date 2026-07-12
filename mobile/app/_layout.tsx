@@ -1,13 +1,16 @@
-import { Stack, useSegments, useRouter } from 'expo-router';
+import { Stack, useSegments, useRouter, ErrorBoundary } from 'expo-router';
 import { HistoryProvider } from '../hooks/useHistory';
 import { SettingsProvider } from '../hooks/useSettings';
-import { AuthProvider, useAuth } from './hooks/useAuth';
+import { AuthProvider, useAuth } from '../hooks/useAuth';
 import { Platform, View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 
 WebBrowser.maybeCompleteAuthSession();
+
+// Catch any JS errors on startup and show a red error screen instead of instantly closing
+export { ErrorBoundary };
 
 export default function RootLayout() {
   return (
@@ -16,7 +19,8 @@ export default function RootLayout() {
         <SettingsProvider>
           <HistoryProvider>
             {Platform.OS === 'web' && (
-              <style dangerouslySetInnerHTML={{ __html: `
+              <style dangerouslySetInnerHTML={{
+                __html: `
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;800&family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&display=swap');
                 body, input, button, textarea { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important; outline: none !important; }
                 h1, h2, h3, .logo-text, [data-testid="logo"] { font-family: 'Outfit', sans-serif !important; }
@@ -73,6 +77,7 @@ function RootNavigator() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="sos" options={{ presentation: 'modal' }} />
       <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="signs" />
     </Stack>
   );
 }
