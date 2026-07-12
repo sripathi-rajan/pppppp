@@ -76,9 +76,9 @@ export default function LoginScreen() {
   });
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: '836187070362-ujggpiu8ubfdsc6diuji1cfnbiogqdnq.apps.googleusercontent.com',
-    androidClientId: 'YOUR_ANDROID_CLIENT_ID_HERE',
-    iosClientId: 'YOUR_IOS_CLIENT_ID_HERE',
+    webClientId: '1069854491436-srkg98fnhte7jhpucig0hod8c4kuhpg5.apps.googleusercontent.com',
+    androidClientId: '1069854491436-0mb2fsdo4na5j4tpc2l8i9b1hia3359r.apps.googleusercontent.com',
+    iosClientId: '1069854491436-2ck9gm0qud42fami59rtslgub2uii2j5.apps.googleusercontent.com',
     redirectUri: redirectUri,
   });
 
@@ -333,35 +333,36 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Demo Login Button (Top Left) */}
-      <TouchableOpacity 
-        style={styles.demoButton} 
-        onPress={handleDemoLogin}
-        disabled={isLoading}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="flash" size={14} color="#6b7280" />
-        <Text style={styles.demoButtonText}>Demo Login</Text>
-      </TouchableOpacity>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      {/* Header Row */}
+      <View style={styles.headerRow}>
+        <TouchableOpacity 
+          style={styles.headerButton} 
+          onPress={handleDemoLogin}
+          disabled={isLoading}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="flash" size={14} color="#6b7280" />
+          <Text style={styles.headerButtonText}>Demo Login</Text>
+        </TouchableOpacity>
 
-      {/* Admin Login Button (Top Right) */}
-      <TouchableOpacity 
-        style={styles.adminButton} 
-        onPress={() => {
-          const url = `${getApiBaseUrl()}/admin`;
-          if (Platform.OS === 'web') {
-            window.open(url, '_blank');
-          } else {
-            WebBrowser.openBrowserAsync(url);
-          }
-        }}
-        disabled={isLoading}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="settings-outline" size={14} color="#6b7280" />
-        <Text style={styles.demoButtonText}>Admin</Text>
-      </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.headerButton} 
+          onPress={() => {
+            const url = `${getApiBaseUrl()}/admin`;
+            if (Platform.OS === 'web') {
+              window.open(url, '_blank');
+            } else {
+              WebBrowser.openBrowserAsync(url);
+            }
+          }}
+          disabled={isLoading}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="settings-outline" size={14} color="#6b7280" />
+          <Text style={styles.headerButtonText}>Admin</Text>
+        </TouchableOpacity>
+      </View>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -587,7 +588,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingTop: 20,
+    paddingBottom: 80, // Extra padding at the bottom so it doesn't get cut off
     justifyContent: 'center',
   },
   logoContainer: {
@@ -725,35 +727,25 @@ const styles = StyleSheet.create({
   toggleText: { color: '#6b7280', fontSize: 14 },
   toggleLink: { color: '#C9621D', fontSize: 14, fontWeight: '700' },
 
-  demoButton: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  headerButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f3f4f6',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
-    zIndex: 10,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
-  adminButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    zIndex: 10,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  demoButtonText: {
+  headerButtonText: {
     color: '#4b5563',
     fontSize: 13,
     fontWeight: '600',

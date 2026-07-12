@@ -16,7 +16,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.sripathirajan.drivelegal",
+      "bundleIdentifier": "com.dakshankarthic.drivelegal",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "DriveLegal needs microphone access for voice search."
       }
@@ -33,7 +33,7 @@
         "backgroundColor": "#ffffff"
       },
       "usesCleartextTraffic": true,
-      "package": "com.sripathirajan.drivelegalmobile",
+      "package": "com.dakshankarthic.drivelegal",
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyDTfY-7KE8S7fhS2CaxXK0-QZFRWuWCZnc"

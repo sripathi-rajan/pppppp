@@ -1,4 +1,4 @@
-package com.sripathirajan.drivelegalmobile
+package com.dakshankarthic.drivelegal
 
 import android.os.Build
 import android.os.Bundle

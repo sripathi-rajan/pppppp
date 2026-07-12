@@ -1,4 +1,4 @@
-package com.sripathirajan.drivelegalmobile
+package com.dakshankarthic.drivelegal
 
 import android.app.Application
 import android.content.res.Configuration
