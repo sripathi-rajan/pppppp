@@ -9,6 +9,7 @@ Provides secure endpoints for the admin panel:
 """
 import os
 import json
+import re
 import sqlite3
 import glob
 from datetime import datetime
@@ -20,6 +21,10 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 # ── Config ──────────────────────────────────────────────────────────────────
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "drivelegal-admin-2025")
+
+# Report ids are used to build file paths (REPORTS_DIR/{id}.json etc.) — reject
+# anything that isn't a plain token so a crafted id can't escape REPORTS_DIR.
+_SAFE_REPORT_ID = re.compile(r"^[A-Za-z0-9_-]+$")
 
 # Paths
 _BASE = os.path.dirname(__file__)
@@ -161,6 +166,8 @@ def list_reports(
 
 @router.get("/reports/{report_id}")
 def get_report(report_id: str, _: bool = Depends(require_admin)):
+    if not _SAFE_REPORT_ID.match(report_id):
+        raise HTTPException(status_code=400, detail="Invalid report id")
     fpath = os.path.join(REPORTS_DIR, f"{report_id}.json")
     if not os.path.exists(fpath):
         raise HTTPException(status_code=404, detail="Report not found")
@@ -177,6 +184,8 @@ def update_report_status(
     body: ReportStatusUpdate,
     _: bool = Depends(require_admin),
 ):
+    if not _SAFE_REPORT_ID.match(report_id):
+        raise HTTPException(status_code=400, detail="Invalid report id")
     fpath = os.path.join(REPORTS_DIR, f"{report_id}.json")
     if not os.path.exists(fpath):
         raise HTTPException(status_code=404, detail="Report not found")
@@ -193,6 +202,8 @@ def update_report_status(
 
 @router.delete("/reports/{report_id}")
 def delete_report(report_id: str, _: bool = Depends(require_admin)):
+    if not _SAFE_REPORT_ID.match(report_id):
+        raise HTTPException(status_code=400, detail="Invalid report id")
     for ext in [".json", ".jpg", ".pdf"]:
         p = os.path.join(REPORTS_DIR, f"{report_id}{ext}")
         if os.path.exists(p):

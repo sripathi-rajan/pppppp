@@ -18,7 +18,7 @@ export const FineCard: React.FC<FineProps> = ({ fine }) => {
         <Ionicons name="alert-circle-outline" size={24} color="#ef4444" />
         <Text style={styles.emptyText}>Not in database — verify at official source</Text>
         {fine?.source_url && (
-            <TouchableOpacity onPress={() => Linking.openURL(fine.source_url)}>
+            <TouchableOpacity onPress={() => Linking.openURL(fine.source_url).catch(() => {})}>
                 <Text style={styles.linkText}>View Official Source</Text>
             </TouchableOpacity>
         )}
@@ -33,14 +33,16 @@ export const FineCard: React.FC<FineProps> = ({ fine }) => {
       <View style={styles.divider} />
       <Text style={styles.sectionHeader}>Section Ref: {fine.section_ref}</Text>
       <Text style={styles.timestamp}>Data as of: {new Date(fine.data_as_of).toLocaleDateString()}</Text>
-      
-      <TouchableOpacity 
-        style={styles.button} 
-        onPress={() => Linking.openURL(fine.source_url)}
-      >
-        <Text style={styles.buttonText}>Open Source URL</Text>
-        <Ionicons name="open-outline" size={16} color="#fff" />
-      </TouchableOpacity>
+
+      {fine.source_url && (
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => Linking.openURL(fine.source_url).catch(() => {})}
+        >
+          <Text style={styles.buttonText}>Open Source URL</Text>
+          <Ionicons name="open-outline" size={16} color="#fff" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 };

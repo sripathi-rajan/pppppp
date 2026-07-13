@@ -449,6 +449,10 @@ def get_briefs():
         print(f"Briefs error: {e}")
         return {"status": "error", "message": "Failed to fetch news."}
 
+import re
+
+_SAFE_REPORT_ID = re.compile(r"^[A-Za-z0-9_-]+$")
+
 class SyncRequest(BaseModel):
     report_ids: List[str]
 
@@ -459,6 +463,8 @@ def sync_reports(request: SyncRequest = Body(...)):
     """
     statuses = {}
     for rid in request.report_ids:
+        if not _SAFE_REPORT_ID.match(rid):
+            continue
         path = os.path.join(REPORTS_DIR, f"{rid}.json")
         if os.path.exists(path):
             try:
@@ -475,7 +481,9 @@ def submit_report(request: ReportRequest = Body(...)):
     Receives incident reports from the mobile app and saves them as files.
     """
     report_id = request.id
-    
+    if not _SAFE_REPORT_ID.match(report_id):
+        return {"status": "error", "message": "Invalid report id."}
+
     # Calculate Fine based on Incident Type
     # Mapping incident types to DB offence codes
     offence_map = {

@@ -48,6 +48,16 @@ export default function ReportScreen() {
     }).start();
   }, []);
 
+  const handleNewReport = () => {
+    clearImage();
+    setIncidentType(null);
+    setVehicleNumber('');
+    setLocationText('');
+    setDescription('');
+    setReportData(null);
+    setSubmitted(false);
+  };
+
   const loadHistory = async () => {
     try {
       const existingStr = await AsyncStorage.getItem('reports_data');
@@ -304,7 +314,9 @@ export default function ReportScreen() {
             </View>
           </View>
 
-
+          <TouchableOpacity style={styles.newReportBtn} onPress={handleNewReport}>
+            <Text style={styles.newReportBtnText}>File Another Report</Text>
+          </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
     );
@@ -341,7 +353,7 @@ export default function ReportScreen() {
                 <Text style={styles.historyCardLocation} numberOfLines={1}>{report.location}</Text>
                 
                 <View style={[styles.historyStatusBadge, report.status === 'verified' ? styles.statusVerified : styles.statusPending]}>
-                  <Text style={styles.historyStatusText}>
+                  <Text style={[styles.historyStatusText, report.status === 'verified' ? styles.statusVerifiedText : styles.statusPendingText]}>
                     {report.status === 'verified' ? 'VERIFIED' : 'PENDING'}
                   </Text>
                 </View>
@@ -508,7 +520,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 50 : 20,
+    paddingTop: 20,
     paddingBottom: 40,
   },
   
@@ -684,7 +696,6 @@ const styles = StyleSheet.create({
   // Sheet (Success) View
   sheetContainer: {
     padding: 20,
-    paddingTop: Platform.OS === 'android' ? 40 : 20,
   },
   sheetPaper: {
     backgroundColor: '#FFFFFF',
@@ -902,6 +913,11 @@ const styles = StyleSheet.create({
   historyStatusText: {
     fontSize: 11,
     fontWeight: '800',
+  },
+  statusPendingText: {
     color: '#EF4444',
+  },
+  statusVerifiedText: {
+    color: '#10B981',
   }
 });

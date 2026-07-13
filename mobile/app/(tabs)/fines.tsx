@@ -91,7 +91,7 @@ export default function FinesScreen() {
       const response = await fetch(`${baseUrl}/challan/calculate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vehicle_number: vehicleNumber }),
+        body: JSON.stringify({ vehicle_number: cleanNum }),
       });
 
       if (!response.ok) {
@@ -462,7 +462,7 @@ export default function FinesScreen() {
                 <Ionicons name="bus-outline" size={20} color="#A16207" />
               </View>
               <Text style={styles.categoryTitle}>Commercial & Load</Text>
-              <Text style={styles.categorySubtitle}>{CATEGORY_DETAILS['Parking & Halting']?.acts.length || 0} {t('rules_count')}</Text>
+              <Text style={styles.categorySubtitle}>{CATEGORY_DETAILS['Commercial & Load']?.acts.length || 0} {t('rules_count')}</Text>
             </TouchableOpacity>
 
             {/* Category 9 */}
@@ -474,7 +474,7 @@ export default function FinesScreen() {
                 <Ionicons name="leaf-outline" size={20} color="#4D7C0F" />
               </View>
               <Text style={styles.categoryTitle}>Emissions & Health</Text>
-              <Text style={styles.categorySubtitle}>{CATEGORY_DETAILS['Parking & Halting']?.acts.length || 0} {t('rules_count')}</Text>
+              <Text style={styles.categorySubtitle}>{CATEGORY_DETAILS['Emissions & Health']?.acts.length || 0} {t('rules_count')}</Text>
             </TouchableOpacity>
 
             {/* Category 10 */}

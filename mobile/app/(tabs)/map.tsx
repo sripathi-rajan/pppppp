@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, ActivityIndicator, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Polygon, Region, Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,6 +45,7 @@ const POIS: POI[] = [
 export default function MapScreen() {
   const { t, setSharedLocation } = useSettings();
   const { poiFilter } = useLocalSearchParams<{ poiFilter: string }>();
+  const insets = useSafeAreaInsets();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [zones, setZones] = useState<Zone[]>([]);
@@ -216,7 +218,8 @@ export default function MapScreen() {
       console.log("Geocoding failed on map region change:", err);
     }
 
-    setSharedLocation({
+    setSharedLocation(prev => ({
+      ...prev,
       latitude: location?.coords.latitude ?? 0,
       longitude: location?.coords.longitude ?? 0,
       speedLimit: found ? found.speedLimit : 50,
@@ -224,7 +227,7 @@ export default function MapScreen() {
       helmetRequired: true,
       placeName,
       regionName
-    });
+    }));
   };
 
   const toggleFilter = (filter: string) => {
@@ -246,7 +249,7 @@ export default function MapScreen() {
     <View style={styles.container}>
 
       {/* POI Filters Header */}
-      <View style={styles.filterContainer}>
+      <View style={[styles.filterContainer, { top: insets.top + 10 }]}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -336,7 +339,7 @@ export default function MapScreen() {
       </MapView>
 
       {/* Dynamic Rule Panel */}
-      <View style={styles.panel}>
+      <View style={[styles.panel, { bottom: insets.bottom + 20 }]}>
         {activeZone ? (
           <>
             <Text style={styles.zoneTitle}>
@@ -376,7 +379,6 @@ const styles = StyleSheet.create({
   },
   filterContainer: {
     position: 'absolute',
-    top: Platform.OS === 'android' ? 50 : 20,
     left: 0,
     right: 0,
     zIndex: 100,
@@ -407,7 +409,6 @@ const styles = StyleSheet.create({
   },
   panel: {
     position: 'absolute',
-    bottom: 30,
     left: 20,
     right: 20,
     backgroundColor: 'white',

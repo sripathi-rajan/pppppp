@@ -6,6 +6,18 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
+
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FBF7F0"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/7cd91a27-1ba3-41a0-bf6a-d2a59eb7a131",
+      "enabled": true,
+      "fallbackToCacheTimeout": 0
+    },
+    "runtimeVersion": "1.0.0",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.dakshankarthic.drivelegal",
@@ -18,7 +30,7 @@
         "root": "./app"
       },
       "eas": {
-        "projectId": "15a39c8d-44db-4c80-8df5-51e039174d18"
+        "projectId": "7cd91a27-1ba3-41a0-bf6a-d2a59eb7a131"
       }
     },
     "android": {
@@ -63,8 +75,10 @@
       "expo-web-browser",
       "expo-sqlite",
       "expo-status-bar",
-      "expo-image-picker"
+      "expo-image-picker",
+      "expo-splash-screen"
     ],
-    "scheme": "drivelegal"
+    "scheme": "drivelegal",
+    "owner": "ishwarya19"
   }
 }

@@ -110,27 +110,16 @@ export default function LoginScreen() {
     setIsLoading(true);
     setFormError('');
     try {
-      const userInfoResponse = await fetch('https://www.googleapis.com/userinfo/v2/me', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      const userInfo = await userInfoResponse.json();
-      
-      if (!userInfo.email) {
-        throw new Error('Failed to get email from Google.');
-      }
-
       const baseUrl = getApiBaseUrl();
 
+      // The server verifies accessToken directly with Google and derives the
+      // identity itself — the client no longer self-reports email/name/googleId.
       const res = await fetch(`${baseUrl}/api/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email: userInfo.email, 
-          name: userInfo.name || userInfo.email.split('@')[0],
-          googleId: userInfo.id
-        }),
+        body: JSON.stringify({ access_token: accessToken }),
       });
-      
+
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.detail || data.message || 'Google Login Failed on Server');
       

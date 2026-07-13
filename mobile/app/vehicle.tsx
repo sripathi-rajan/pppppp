@@ -14,9 +14,9 @@ const VEHICLES = [
 
 export default function VehicleScreen() {
   const router = useRouter();
-  const { selectedVehicleId, setSelectedVehicleId, completeOnboarding } = useSettings();
+  const { selectedVehicleId, setSelectedVehicleId, completeOnboarding, profile, updateProfile } = useSettings();
   const [selectedId, setSelectedId] = useState(selectedVehicleId || '4w');
-  const [vehicleNumber, setVehicleNumber] = useState('TN 09 BX 4421');
+  const [vehicleNumber, setVehicleNumber] = useState(profile.vehicleNumber || '');
 
   useEffect(() => {
     if (selectedVehicleId) {
@@ -31,6 +31,9 @@ export default function VehicleScreen() {
 
   const handleContinue = async () => {
     setSelectedVehicleId(selectedId);
+    if (vehicleNumber.trim()) {
+      await updateProfile({ vehicleNumber: vehicleNumber.trim() });
+    }
     await completeOnboarding();
     router.replace('/(tabs)');
   };
@@ -132,7 +135,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 50 : 20,
     paddingBottom: 16,
   },
   backButton: {

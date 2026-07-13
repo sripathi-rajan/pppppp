@@ -9,6 +9,7 @@ interface UserProfile {
   drivingSince: string;
   country?: string;
   state?: string;
+  vehicleNumber?: string;
   emergencyContact?: string;
   emergencyContactName?: string;
 }

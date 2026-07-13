@@ -83,7 +83,6 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 24,
-    paddingTop: Platform.OS === 'android' ? 50 : 24,
     justifyContent: 'space-between',
   },
   logoContainer: {

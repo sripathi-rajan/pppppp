@@ -25,7 +25,6 @@ import { useHistory } from '../../hooks/useHistory';
 import { useSettings } from '../../hooks/useSettings';
 import { useAuth } from '../../hooks/useAuth';
 import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
 import * as Location from 'expo-location';
 import { requestRecordingPermissionsAsync, setAudioModeAsync, AudioRecorder, RecordingPresets } from 'expo-audio';
 import { readAsStringAsync } from 'expo-file-system/legacy';
@@ -52,7 +51,7 @@ export default function DriveLegalAssistant() {
   const [currentLocation, setCurrentLocation] = useState<string>('');
   const [pendingImage, setPendingImage] = useState<{ base64: string; mimeType: string } | null>(null);
   const attachMenuAnim = useRef(new Animated.Value(0)).current;
-  const recordingRef = useRef<Audio.Recording | null>(null);
+  const recordingRef = useRef<AudioRecorder | null>(null);
   const recognitionRef = useRef<any>(null);
   
   const scrollRef = useRef<ScrollView>(null);
@@ -125,6 +124,14 @@ export default function DriveLegalAssistant() {
   useEffect(() => {
     chatHistoryRef.current = chatHistory;
   }, [chatHistory]);
+
+  // Stop any in-progress recording/speech-recognition if the user navigates away mid-recording.
+  useEffect(() => {
+    return () => {
+      try { recordingRef.current?.stop(); } catch {}
+      try { recognitionRef.current?.stop(); } catch {}
+    };
+  }, []);
 
   useEffect(() => {
     if (!initialized) return;
@@ -389,12 +396,9 @@ export default function DriveLegalAssistant() {
 
   const handlePickDocument = async () => {
     toggleAttachMenu();
-    const result = await DocumentPicker.getDocumentAsync({
-      type: "*/*",
-    });
-    if (!result.canceled) {
-      Alert.alert("Success", "Document uploaded for analysis.");
-    }
+    // Document analysis isn't wired to the backend yet (only photo evidence is) —
+    // avoid telling the user it was "uploaded for analysis" when nothing happens with it.
+    Alert.alert("Coming soon", "Document analysis isn't available yet. Try attaching a photo or typing your question instead.");
   };
 
   const handleVoiceInput = async () => {
@@ -727,10 +731,10 @@ export default function DriveLegalAssistant() {
               <Ionicons name="mic-outline" size={24} color={isListening ? "#d97706" : "#6b7280"} />
             </TouchableOpacity>
             
-            <TouchableOpacity 
-              style={[styles.sendButton, (!queryText.trim() && !pendingImage) && styles.sendButtonDisabled]}
+            <TouchableOpacity
+              style={[styles.sendButton, ((!queryText.trim() && !pendingImage) || isLoading) && styles.sendButtonDisabled]}
               onPress={() => handleSend()}
-              disabled={(!queryText.trim() && !pendingImage) && !isLoading}
+              disabled={(!queryText.trim() && !pendingImage) || isLoading}
             >
               <Ionicons name="send" size={18} color="#fff" />
             </TouchableOpacity>

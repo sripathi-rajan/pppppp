@@ -1,5 +1,8 @@
 import os
 import sqlite3
+import json
+import urllib.request
+import urllib.parse
 import jwt
 import bcrypt
 from datetime import datetime, timedelta
@@ -13,6 +16,14 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 SECRET_KEY = os.environ.get("JWT_SECRET", "super-secret-key-drivelegal-secure-key-32bytes")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
+
+# OAuth client IDs registered for this app (mobile/app/login.tsx) — used to make sure a
+# Google access token was actually issued to us before we trust the identity it carries.
+GOOGLE_CLIENT_IDS = {
+    "1069854491436-srkg98fnhte7jhpucig0hod8c4kuhpg5.apps.googleusercontent.com",  # web
+    "1069854491436-0mb2fsdo4na5j4tpc2l8i9b1hia3359r.apps.googleusercontent.com",  # android
+    "1069854491436-2ck9gm0qud42fami59rtslgub2uii2j5.apps.googleusercontent.com",  # ios
+}
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 USERS_DB = os.path.join(DATA_DIR, "users.db")
@@ -99,9 +110,7 @@ class LoginRequest(BaseModel):
     password: str
 
 class GoogleAuthRequest(BaseModel):
-    email: EmailStr
-    name: str
-    googleId: Optional[str] = None
+    access_token: str
 
 class CompleteProfileRequest(BaseModel):
     name: str
@@ -119,6 +128,38 @@ def get_password_hash(password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+
+def verify_google_access_token(access_token: str) -> dict:
+    """
+    Verify a Google OAuth access token server-side before trusting any identity
+    claims from it. Without this, anyone could POST an arbitrary email/googleId
+    straight to /api/auth/google and be issued a valid session for that account.
+    """
+    tokeninfo_url = "https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=" + urllib.parse.quote(access_token)
+    try:
+        with urllib.request.urlopen(tokeninfo_url, timeout=5) as resp:
+            info = json.loads(resp.read())
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired Google access token")
+
+    if info.get("aud") not in GOOGLE_CLIENT_IDS:
+        raise HTTPException(status_code=401, detail="Google token was not issued for this app")
+    if str(info.get("email_verified")).lower() != "true" or not info.get("email"):
+        raise HTTPException(status_code=401, detail="Google account email is not verified")
+
+    name = info.get("email").split("@")[0]
+    try:
+        userinfo_req = urllib.request.Request(
+            "https://www.googleapis.com/oauth2/v3/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        with urllib.request.urlopen(userinfo_req, timeout=5) as resp:
+            profile = json.loads(resp.read())
+            name = profile.get("name") or name
+    except Exception:
+        pass  # Name is cosmetic only; email/sub above are already verified.
+
+    return {"email": info["email"], "googleId": info.get("sub", ""), "name": name}
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -213,21 +254,23 @@ def logout_user():
 
 @router.post("/google")
 def google_auth(req: GoogleAuthRequest):
+    verified = verify_google_access_token(req.access_token)
+
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     # Check if user already exists
-    cursor.execute("SELECT * FROM users WHERE email = ?", (req.email,))
+    cursor.execute("SELECT * FROM users WHERE email = ?", (verified["email"],))
     user = cursor.fetchone()
     conn.close()
-    
+
     if not user:
         return {
             "require_profile_completion": True,
             "googleProfile": {
-                "name": req.name,
-                "email": req.email,
-                "googleId": req.googleId or ""
+                "name": verified["name"],
+                "email": verified["email"],
+                "googleId": verified["googleId"]
             }
         }
     

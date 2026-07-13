@@ -392,7 +392,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingTop: Platform.OS === 'android' ? 50 : 20,
     paddingBottom: 40,
   },
   header: {

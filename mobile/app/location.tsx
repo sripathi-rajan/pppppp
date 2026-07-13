@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import * as Location from 'expo-location';
+import { useSettings } from '../hooks/useSettings';
 
 const LOCATIONS = [
   { id: 'IN', country: 'India', region: 'Tamil Nadu', code: 'IN' },
@@ -15,8 +17,50 @@ const LOCATIONS = [
 
 export default function LocationScreen() {
   const router = useRouter();
+  const { updateProfile } = useSettings();
   const [selectedId, setSelectedId] = useState('IN');
   const [searchQuery, setSearchQuery] = useState('');
+  const [locating, setLocating] = useState(false);
+
+  const filteredLocations = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return LOCATIONS;
+    return LOCATIONS.filter(
+      (loc) => loc.country.toLowerCase().includes(q) || loc.region.toLowerCase().includes(q)
+    );
+  }, [searchQuery]);
+
+  const handleUseMyLocation = async () => {
+    setLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Enable location access to auto-detect your country.');
+        return;
+      }
+      const position = await Location.getCurrentPositionAsync({});
+      const geocode = await Location.reverseGeocodeAsync(position.coords);
+      const isoCode = geocode[0]?.isoCountryCode;
+      const match = LOCATIONS.find((loc) => loc.code === isoCode);
+      if (match) {
+        setSelectedId(match.id);
+      } else {
+        Alert.alert('Not supported yet', "We don't have coverage for your detected location yet. Please pick one from the list.");
+      }
+    } catch (e) {
+      Alert.alert('Could not detect location', 'Please pick your country/state from the list below.');
+    } finally {
+      setLocating(false);
+    }
+  };
+
+  const handleContinue = () => {
+    const selected = LOCATIONS.find((loc) => loc.id === selectedId);
+    if (selected) {
+      updateProfile({ country: selected.country, state: selected.region || selected.country });
+    }
+    router.push('/vehicle');
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -57,18 +101,18 @@ export default function LocationScreen() {
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.locationButton}>
+          <TouchableOpacity style={styles.locationButton} onPress={handleUseMyLocation} disabled={locating}>
             <Ionicons name="location" size={14} color="#ef4444" style={styles.locationIcon} />
-            <Text style={styles.locationButtonText}>Use my location</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.recentButton}>
-            <Text style={styles.recentButtonText}>Recent</Text>
+            <Text style={styles.locationButtonText}>{locating ? 'Locating…' : 'Use my location'}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Location List */}
         <View style={styles.listContainer}>
-          {LOCATIONS.map((loc) => {
+          {filteredLocations.length === 0 && (
+            <Text style={styles.noResultsText}>No matching country or state found.</Text>
+          )}
+          {filteredLocations.map((loc) => {
             const isSelected = selectedId === loc.id;
             return (
               <TouchableOpacity
@@ -97,9 +141,9 @@ export default function LocationScreen() {
 
       {/* Bottom Pinned Continue Button */}
       <View style={styles.footer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.primaryButton}
-          onPress={() => router.push('/vehicle')}
+          onPress={handleContinue}
         >
           <Text style={styles.primaryButtonText}>Continue</Text>
           <Ionicons name="arrow-forward" size={18} color="#fff" style={styles.buttonIcon} />
@@ -118,7 +162,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 50 : 20,
     paddingBottom: 16,
   },
   backButton: {
@@ -212,16 +255,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: Platform.OS === 'web' ? 'Inter, sans-serif' : 'System',
   },
-  recentButton: {
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-  },
-  recentButtonText: {
-    color: '#4b5563',
-    fontSize: 13,
-    fontWeight: '600',
+  noResultsText: {
+    textAlign: 'center',
+    color: '#6b7280',
+    fontSize: 14,
+    paddingVertical: 24,
     fontFamily: Platform.OS === 'web' ? 'Inter, sans-serif' : 'System',
   },
   listContainer: {

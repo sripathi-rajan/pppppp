@@ -52,7 +52,7 @@ export default function SOSScreen() {
     
     if (user && token) {
       try {
-        await fetch(`${getApiBaseUrl()}/users/${user.id}`, {
+        const res = await fetch(`${getApiBaseUrl()}/api/auth/update`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -63,8 +63,15 @@ export default function SOSScreen() {
             emergencyContactName: emergencyName,
           })
         });
+        if (!res.ok) {
+          console.warn('Error saving emergency contact: server returned', res.status);
+          Alert.alert('Saved locally', 'Contact saved on this device, but syncing to your account failed.');
+          return;
+        }
       } catch (e) {
         console.warn('Error saving emergency contact:', e);
+        Alert.alert('Saved locally', 'Contact saved on this device, but syncing to your account failed.');
+        return;
       }
     }
     Alert.alert('Success', 'Emergency contact saved!');
@@ -139,16 +146,18 @@ export default function SOSScreen() {
           {
             text: "Send SMS & Call",
             onPress: () => {
-              Linking.openURL(smsUrl).then(() => {
-                setTimeout(() => {
-                  Linking.openURL(`tel:${numberToCall}`);
-                }, 1200);
-              });
+              Linking.openURL(smsUrl)
+                .catch(() => {})
+                .finally(() => {
+                  setTimeout(() => {
+                    Linking.openURL(`tel:${numberToCall}`).catch(() => {});
+                  }, 1200);
+                });
             }
           },
           {
             text: "Only Call Services",
-            onPress: () => Linking.openURL(`tel:${numberToCall}`)
+            onPress: () => Linking.openURL(`tel:${numberToCall}`).catch(() => {})
           },
           {
             text: "Cancel",
@@ -161,7 +170,7 @@ export default function SOSScreen() {
         "SOS Triggered",
         `Dialing emergency services: ${numberToCall}. (Tip: configure emergency contact below to auto-alert them).`,
         [
-          { text: "Call Now", onPress: () => Linking.openURL(`tel:${numberToCall}`) },
+          { text: "Call Now", onPress: () => Linking.openURL(`tel:${numberToCall}`).catch(() => {}) },
           { text: "Cancel", style: "cancel" }
         ]
       );
@@ -204,7 +213,7 @@ export default function SOSScreen() {
   };
 
   const call = (number: string) => {
-    Linking.openURL(`tel:${number}`);
+    Linking.openURL(`tel:${number}`).catch(() => {});
   };
 
   return (
@@ -343,7 +352,7 @@ const styles = StyleSheet.create({
   scrollContainer: {
     paddingHorizontal: 20,
     paddingBottom: 40,
-    paddingTop: Platform.OS === 'android' ? 50 : 20,
+    paddingTop: 20,
   },
 
   // Header
