@@ -27,8 +27,8 @@ import { useAuth } from '../../hooks/useAuth';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Location from 'expo-location';
-import { Audio } from 'expo-av';
-import { readAsStringAsync } from 'expo-file-system';
+import { requestRecordingPermissionsAsync, setAudioModeAsync, AudioRecorder, RecordingPresets } from 'expo-audio';
+import { readAsStringAsync } from 'expo-file-system/legacy';
 import { getApiBaseUrl } from '../../lib/api';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 export default function DriveLegalAssistant() {
@@ -446,15 +446,15 @@ export default function DriveLegalAssistant() {
       return;
     }
 
-    // ── NATIVE: record with expo-av → transcribe via backend ────────────────
+    // ── NATIVE: record with expo-audio → transcribe via backend ────────────────
     // Second tap → stop recording and transcribe
     if (isListening && recordingRef.current) {
       try {
         const recording = recordingRef.current;
         recordingRef.current = null;
         setIsListening(false);
-        await recording.stopAndUnloadAsync();
-        const uri = recording.getURI();
+        await recording.stop();
+        const uri = recording.uri;
         if (!uri) throw new Error('No audio file recorded');
 
         // Read file as base64
@@ -486,20 +486,20 @@ export default function DriveLegalAssistant() {
 
     // First tap → request permission and start recording
     try {
-      const { status } = await Audio.requestPermissionsAsync();
+      const { status } = await requestRecordingPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission required', 'Microphone access is needed for voice search.');
         return;
       }
 
-      await Audio.setAudioModeAsync({
+      await setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
       });
 
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
+      const recording = new AudioRecorder(RecordingPresets.HIGH_QUALITY);
+      await recording.prepareToRecordAsync();
+      recording.record();
       recordingRef.current = recording;
       setIsListening(true);
     } catch (err: any) {

@@ -18,7 +18,7 @@
         "root": "./app"
       },
       "eas": {
-        "projectId": "985ec079-a085-44a6-a262-b61c7d293f9b"
+        "projectId": "15a39c8d-44db-4c80-8df5-51e039174d18"
       }
     },
     "android": {
@@ -35,7 +35,10 @@
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ]
     },
     "web": {
@@ -52,7 +55,7 @@
         }
       ],
       [
-        "expo-av",
+        "expo-audio",
         {
           "microphonePermission": "Allow DriveLegal to access your microphone for voice search."
         }
