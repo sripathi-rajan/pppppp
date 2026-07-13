@@ -1,5 +1,6 @@
 services:
-  - type: static
+  - type: web
+    env: static
     name: drivelegal-web
     buildCommand: ./render-build.sh
     staticPublishPath: mobile/dist
