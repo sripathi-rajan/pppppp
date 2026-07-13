@@ -21,6 +21,9 @@ export function getApiBaseUrl(): string {
     if (window.location.hostname.includes('netlify.app') || window.location.hostname.includes('vercel.app') || window.location.hostname === 'drivelegal.in') {
       return ''; // Same-origin: let the Netlify proxy forward /api/* to EC2
     }
+    if (window.location.hostname.includes('onrender.com')) {
+      return 'http://13.222.36.11:8000'; // Direct connection to new AWS backend
+    }
   }
 
   const envHost = process.env.EXPO_PUBLIC_API_HOST?.trim();

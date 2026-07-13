@@ -489,7 +489,9 @@
   <div class="loader" id="loader"><div class="spinner"></div></div>
 
   <script>
-    const API = window.location.origin;
+    const API = window.location.hostname.includes('onrender.com') 
+      ? 'http://13.222.36.11:8000' 
+      : window.location.origin;
     let SECRET = '';
     let ALL_REPORTS = [];
     let STATUS_F = 'all';

@@ -13,17 +13,21 @@ export default function TabLayout() {
     <View style={styles.container}>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: '#d97706',
-          tabBarInactiveTintColor: '#9ca3af',
+          tabBarActiveTintColor: '#38BDF8',
+          tabBarInactiveTintColor: '#64748B',
           tabBarHideOnKeyboard: true,
           tabBarStyle: {
-            backgroundColor: '#fff',
-            borderTopColor: '#e5e7eb',
+            backgroundColor: '#1E293B',
+            borderTopColor: '#334155',
+            borderTopWidth: 1,
             height: Platform.OS === 'ios' ? 80 + insets.bottom : 65 + insets.bottom,
             paddingBottom: Platform.OS === 'ios' ? insets.bottom + 5 : insets.bottom + 8,
             paddingTop: 10,
-            elevation: 0,
-            shadowOpacity: 0,
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -4 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
           },
           tabBarItemStyle: {
             justifyContent: 'center',
@@ -34,6 +38,7 @@ export default function TabLayout() {
           tabBarLabelStyle: {
             fontSize: 11,
             marginTop: 4,
+            fontWeight: '500',
           },
         }}
       >
@@ -115,6 +120,6 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF8F5',
+    backgroundColor: '#0F172A',
   },
 });

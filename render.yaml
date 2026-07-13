@@ -1,0 +1,17 @@
+services:
+  - type: static
+    name: drivelegal-web
+    buildCommand: ./render-build.sh
+    staticPublishPath: mobile/dist
+    envVars:
+      - key: EXPO_PUBLIC_API_PORT
+        value: 8000
+      - key: EXPO_PUBLIC_API_URL
+        value: http://13.222.36.11:8000
+    routes:
+      - type: rewrite
+        source: /admin/*
+        destination: /admin/index.html
+      - type: rewrite
+        source: /*
+        destination: /index.html

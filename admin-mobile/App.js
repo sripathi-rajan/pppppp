@@ -6,7 +6,7 @@ export default function App() {
   return (
     <SafeAreaView style={styles.container}>
       <WebView 
-        source={{ uri: 'https://drivelegalv1.netlify.app/admin' }} 
+        source={{ uri: 'https://drive-legal-render.onrender.com/admin' }} 
         style={styles.webview}
         javaScriptEnabled={true}
         domStorageEnabled={true}

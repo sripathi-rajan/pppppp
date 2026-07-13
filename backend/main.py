@@ -49,6 +49,7 @@ app = FastAPI(
 CORS_ORIGINS = [
     "https://*.netlify.app",
     "https://drivelegalv1.netlify.app",
+    "https://*.onrender.com",
     "http://localhost:8081",
     "http://localhost:3000",
     "*"
@@ -58,6 +59,7 @@ if IS_PRODUCTION:
     # Restrict CORS in production
     CORS_ORIGINS = [
         "https://drivelegalv1.netlify.app",
+        "https://*.onrender.com",
         # Add your own custom domain here if you have one
     ]
     print(f"Running in PRODUCTION mode. CORS restricted to: {CORS_ORIGINS}")
