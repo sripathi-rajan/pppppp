@@ -22,7 +22,7 @@ export function getApiBaseUrl(): string {
       return ''; // Same-origin: let the Netlify proxy forward /api/* to EC2
     }
     if (window.location.hostname.includes('onrender.com')) {
-      return 'http://13.222.36.11:8000'; // Direct connection to new AWS backend
+      return 'https://13.222.36.11.nip.io'; // HTTPS backend (avoids mixed-content block)
     }
   }
 

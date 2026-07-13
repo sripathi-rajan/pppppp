@@ -28,7 +28,7 @@
 # Forward /api/* to the AWS backend (avoids CORS & mixed-content issues)
 [[redirects]]
   from = "/api/*"
-  to = "http://13.50.138.113:8000/api/:splat"
+  to = "https://13.222.36.11.nip.io/api/:splat"
   status = 200
   force = true
 
@@ -38,49 +38,49 @@
 # builds (same-origin, BASE_URL=""), so they need their own proxy rules too.
 [[redirects]]
   from = "/query"
-  to = "http://13.50.138.113:8000/query"
+  to = "https://13.222.36.11.nip.io/query"
   status = 200
   force = true
 
 [[redirects]]
   from = "/transcribe"
-  to = "http://13.50.138.113:8000/transcribe"
+  to = "https://13.222.36.11.nip.io/transcribe"
   status = 200
   force = true
 
 [[redirects]]
   from = "/challan/*"
-  to = "http://13.50.138.113:8000/challan/:splat"
+  to = "https://13.222.36.11.nip.io/challan/:splat"
   status = 200
   force = true
 
 [[redirects]]
   from = "/briefs"
-  to = "http://13.50.138.113:8000/briefs"
+  to = "https://13.222.36.11.nip.io/briefs"
   status = 200
   force = true
 
 [[redirects]]
   from = "/notifications"
-  to = "http://13.50.138.113:8000/notifications"
+  to = "https://13.222.36.11.nip.io/notifications"
   status = 200
   force = true
 
 [[redirects]]
   from = "/report/*"
-  to = "http://13.50.138.113:8000/report/:splat"
+  to = "https://13.222.36.11.nip.io/report/:splat"
   status = 200
   force = true
 
 [[redirects]]
   from = "/health"
-  to = "http://13.50.138.113:8000/health"
+  to = "https://13.222.36.11.nip.io/health"
   status = 200
   force = true
 
 [[redirects]]
   from = "/users/*"
-  to = "http://13.50.138.113:8000/users/:splat"
+  to = "https://13.222.36.11.nip.io/users/:splat"
   status = 200
   force = true
 

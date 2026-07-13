@@ -7,7 +7,7 @@
 # Proxy API requests to AWS backend (solves HTTPS → HTTP mixed content)
 [[redirects]]
   from = "/api/*"
-  to = "http://13.50.138.113/:splat"
+  to = "https://13.222.36.11.nip.io/:splat"
   status = 200
   force = true
 
