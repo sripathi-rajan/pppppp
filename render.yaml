@@ -8,7 +8,7 @@ services:
       - key: EXPO_PUBLIC_API_PORT
         value: "8000"
       - key: EXPO_PUBLIC_API_URL
-        value: http://13.222.36.11:8000
+        value: https://13.222.36.11.nip.io
     routes:
       - type: rewrite
         source: /admin/*
