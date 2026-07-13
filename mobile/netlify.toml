@@ -32,6 +32,58 @@
   status = 200
   force = true
 
+# The FastAPI backend also exposes several routes with no /api prefix
+# (see backend/main.py: /query, /transcribe, /challan, /briefs, /notifications,
+# /report, /health, /users). The mobile client calls these unprefixed on web
+# builds (same-origin, BASE_URL=""), so they need their own proxy rules too.
+[[redirects]]
+  from = "/query"
+  to = "http://13.50.138.113:8000/query"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/transcribe"
+  to = "http://13.50.138.113:8000/transcribe"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/challan/*"
+  to = "http://13.50.138.113:8000/challan/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/briefs"
+  to = "http://13.50.138.113:8000/briefs"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/notifications"
+  to = "http://13.50.138.113:8000/notifications"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/report/*"
+  to = "http://13.50.138.113:8000/report/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/health"
+  to = "http://13.50.138.113:8000/health"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/users/*"
+  to = "http://13.50.138.113:8000/users/:splat"
+  status = 200
+  force = true
+
 # ── SPA Redirect Rules ──────────────────────────────────────────────────────
 # All routes → index.html (for client-side routing with expo-router)
 [[redirects]]

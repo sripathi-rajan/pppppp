@@ -1,2 +1,10 @@
 /api/*  http://13.50.138.113:8000/api/:splat  200!
+/query           http://13.50.138.113:8000/query           200!
+/transcribe      http://13.50.138.113:8000/transcribe      200!
+/challan/*       http://13.50.138.113:8000/challan/:splat  200!
+/briefs          http://13.50.138.113:8000/briefs          200!
+/notifications   http://13.50.138.113:8000/notifications   200!
+/report/*        http://13.50.138.113:8000/report/:splat   200!
+/health          http://13.50.138.113:8000/health          200!
+/users/*         http://13.50.138.113:8000/users/:splat    200!
 /*      /index.html                            200
