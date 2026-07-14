@@ -44,7 +44,7 @@ function RootNavigator() {
   useEffect(() => {
     if (isLoading) return;
 
-    const isAtHomepage = segments.length === 0 || segments[0] === 'index';
+    const isAtHomepage = (segments.length as number) === 0 || segments[0] === 'index';
     const isAtLogin = segments[0] === 'login';
 
     if (!isAuthenticated && !isAtHomepage && !isAtLogin) {

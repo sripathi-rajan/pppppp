@@ -90,34 +90,35 @@ class SmartSynthesizer:
         avg_score = sum(scores) / len(scores)
         return avg_score / 10.0
         
-    async def _synthesize_full(self, eval_result, sources, question, intent):
+    def _google_text(self, sources) -> str:
+        return "\n".join([
+            f"- {str(r.answer)[:400]}"
+            for r in sources.get("google_answers", [])[:5]
+        ])
+
+    def _build_full_prompt(self, sources, question) -> str:
         partial_info = ""
         for s in sources.get("db_answers", []):
             partial_info += str(s.answer) + "\n"
         if sources.get("ollama_answer"):
             partial_info += str(sources["ollama_answer"].answer) + "\n"
-            
-        prompt = f"""USER ASKED: "{question}"
-        
+
+        return f"""USER ASKED: "{question}"
+
         Here is data from DB and AI:
         {partial_info[:1500]}
-        
-        Synthesize a direct, helpful answer using ONLY this data. 
-        
+
+        Synthesize a direct, helpful answer using ONLY this data.
+
         IMPORTANT FORMATTING RULES:
         - Use numbered sections (e.g., "1. PENALTY DETAILS")
         - Use **bold** for key terms or fines
         - Use • bullets for itemized rules
         - Keep it structured and easy to read."""
-        return await self._call_local_llm(prompt)
-        
-    async def _synthesize_from_web_enhanced(self, sources, question, intent):
-        google_text = "\n".join([
-            f"- {str(r.answer)[:400]}" 
-            for r in sources.get("google_answers", [])[:5]
-        ])
-        
-        enhancement_prompt = f"""You are a traffic law educator for India.
+
+    def _build_web_enhanced_prompt(self, sources, question) -> str:
+        google_text = self._google_text(sources)
+        return f"""You are a traffic law educator for India.
 
 USER ASKED: "{question}"
 
@@ -161,19 +162,44 @@ IMPORTANT FORMATTING RULES:
 
 Length: 700-1000 words"""
 
-        answer = await self._call_local_llm(enhancement_prompt)
-        return answer if answer else google_text
-        
-    async def _synthesize_db_expanded(self, sources, question, intent):
+    def _build_db_expanded_prompt(self, sources, question) -> str:
         db_text = "\n".join([str(s.answer) for s in sources.get("db_answers", [])])
-        prompt = f"USER ASKED: {question}\nDB DATA: {db_text}\nExpand this strictly based on DB facts."
+        return f"USER ASKED: {question}\nDB DATA: {db_text}\nExpand this strictly based on DB facts."
+
+    def _build_fallback_prompt(self, question) -> str:
+        return f"USER ASKED: {question}\nAnswer directly based on general knowledge of Indian traffic laws."
+
+    async def _synthesize_full(self, eval_result, sources, question, intent):
+        prompt = self._build_full_prompt(sources, question)
         return await self._call_local_llm(prompt)
-        
+
+    async def _synthesize_from_web_enhanced(self, sources, question, intent):
+        enhancement_prompt = self._build_web_enhanced_prompt(sources, question)
+        answer = await self._call_local_llm(enhancement_prompt)
+        return answer if answer else self._google_text(sources)
+
+    async def _synthesize_db_expanded(self, sources, question, intent):
+        prompt = self._build_db_expanded_prompt(sources, question)
+        return await self._call_local_llm(prompt)
+
     async def _synthesize_fallback(self, question, intent):
-        prompt = f"USER ASKED: {question}\nAnswer directly based on general knowledge of Indian traffic laws."
+        prompt = self._build_fallback_prompt(question)
         return await self._call_local_llm(prompt)
-        
-    async def _call_local_llm(self, prompt: str) -> str:
+
+    async def _call_local_llm(self, prompt: str, stream: bool = False):
+        """When stream=True, returns the raw async completion-chunk iterator instead of
+        awaiting the full text — caller is responsible for consuming and error handling."""
+        if stream:
+            return await self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an expert Indian Traffic Police assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.4,
+                max_tokens=2048,
+                stream=True,
+            )
         try:
             response = await self.client.chat.completions.create(
                 model=self.model_name,
@@ -188,6 +214,57 @@ Length: 700-1000 words"""
         except Exception as e:
             print(f"Error calling DeepSeek Synthesizer API: {e}")
             return "An error occurred while generating the guide."
+
+    async def synthesize_stream(self, raw_evaluation, user_question, query_intent, all_sources):
+        """Streaming counterpart to synthesize(): same branching logic to pick a prompt, but
+        yields text deltas as they arrive instead of returning one final string.
+
+        Simplifications vs. synthesize(): skips the post-hoc _ensure_formatting pass (it needs
+        the full text) and always appends the references/safety footer (synthesize() only skips
+        it if the answer happens to already end in '!').
+        """
+        sources_data = {
+            'db_answers': [s for s in all_sources if s.source.value == 'db'],
+            'ollama_answer': next((s for s in all_sources if s.source.value == 'ollama'), None),
+            'google_answers': [s for s in all_sources if s.source.value == 'google'],
+        }
+
+        has_db = len(sources_data.get('db_answers', [])) > 0
+        has_ollama = sources_data.get('ollama_answer') is not None
+        has_google = len(sources_data.get('google_answers', [])) > 0
+
+        if has_db and has_ollama:
+            prompt = self._build_full_prompt(sources_data, user_question)
+        elif has_google:
+            prompt = self._build_web_enhanced_prompt(sources_data, user_question)
+        elif has_db:
+            prompt = self._build_db_expanded_prompt(sources_data, user_question)
+        else:
+            prompt = self._build_fallback_prompt(user_question)
+
+        try:
+            stream = await self._call_local_llm(prompt, stream=True)
+            async for chunk in stream:
+                delta = chunk.choices[0].delta.content if chunk.choices else None
+                if delta:
+                    yield delta
+        except Exception as e:
+            print(f"Error streaming DeepSeek Synthesizer API: {e}")
+            yield "An error occurred while generating the guide."
+            return
+
+        urls = []
+        for s in all_sources:
+            if s.source.value == "google" and "urls" in s.metadata:
+                urls.extend(s.metadata["urls"])
+
+        trailing = ""
+        if urls:
+            trailing += "\n\n**References:**\n"
+            for u in urls:
+                trailing += f"• {u}\n"
+        trailing += "\n\n---\n💡 For complete details: parivahan.gov.in | mParivahan app | Local RTO\n🛡️ Drive safely! Your family wants you home alive."
+        yield trailing
             
     def _ensure_formatting(self, answer, intent):
         if '→' in answer or '**' in answer:

@@ -118,6 +118,56 @@ class TrafficPolicyChatbot:
             )
         return await self.aggregator.fetch_all_sources(question)
 
+    async def process_query_stream(self, user_question: str):
+        """Streaming counterpart to process_query(): runs the same classify → aggregate →
+        judge pipeline (not streamed — same latency as today), then yields the synthesizer's
+        answer as it's generated instead of returning one final string.
+
+        Yields ("delta", text) chunks as they arrive, followed by exactly one
+        ("done", sources_consulted) tuple at the end.
+        """
+        intent_info = self.classifier.classify(user_question)
+
+        if intent_info.get("_should_respond") == False:
+            yield ("delta", "Hello! I'm DriveLegal, your AI traffic law assistant.\n\nI can help you with:\n\n"
+                   "→ Traffic fines and penalties\n→ Helmet & seatbelt rules\n→ Speed limits by zone\n"
+                   "→ Drunk driving laws\n→ Parking regulations\n→ Document requirements\n\n"
+                   "What would you like to know? Ask me any traffic law question!")
+            yield ("done", [])
+            return
+
+        intent_str = intent_info['intent_type']
+        if intent_str == "broad_edu" or intent_str == "general_query":
+            intent = QueryIntent.BROAD_EDUCATIONAL
+        else:
+            intent = QueryIntent.SPECIFIC_RULE
+
+        sources = await self.aggregator.fetch_all_sources(user_question)
+
+        judge_result = await self.judge.evaluate_sources(
+            sources=sources,
+            user_question=user_question,
+            query_intent=intent,
+            current_iteration=1
+        )
+
+        if judge_result.get("fatal_flaw_detected") and intent_str == "general_query":
+            judge_result["fatal_flaw_detected"] = False
+            judge_result["needs_research"] = False
+
+        if judge_result.get("fatal_flaw_detected"):
+            sources = await self._retry_with_corrected_scope(user_question, intent, judge_result)
+
+        async for chunk in self.synthesizer.synthesize_stream(
+            raw_evaluation=judge_result,
+            user_question=user_question,
+            query_intent=intent,
+            all_sources=sources
+        ):
+            yield ("delta", chunk)
+
+        yield ("done", [s.source.value for s in sources] if sources else [])
+
     def _apply_professional_formatting(self, answer: str, intent_type: str) -> str:
         """
         Apply → arrows, **bold**, • bullets formatting

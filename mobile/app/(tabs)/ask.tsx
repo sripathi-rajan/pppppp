@@ -16,7 +16,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import { useQuery, ChatHistoryTurn } from '../../hooks/useQuery';
+import { ChatHistoryTurn } from '../../hooks/useQuery';
+import { useSmartChat } from '../../hooks/useSmartChat';
+import { TierIndicator } from '../../components/TierIndicator';
+import { OfflineBanner } from '../../components/OfflineBanner';
 import { buildCitationLabel } from '../../lib/citations';
 import { buildWelcomeText, WELCOME_SUGGESTIONS } from '../../lib/welcome';
 import { StatusBar } from 'expo-status-bar';
@@ -26,7 +29,7 @@ import { useSettings } from '../../hooks/useSettings';
 import { useAuth } from '../../hooks/useAuth';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { requestRecordingPermissionsAsync, setAudioModeAsync, AudioRecorder, RecordingPresets } from 'expo-audio';
+import { requestRecordingPermissionsAsync, setAudioModeAsync, RecordingPresets, AudioModule } from 'expo-audio';
 import { readAsStringAsync } from 'expo-file-system/legacy';
 import { getApiBaseUrl } from '../../lib/api';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
@@ -51,7 +54,7 @@ export default function DriveLegalAssistant() {
   const [currentLocation, setCurrentLocation] = useState<string>('');
   const [pendingImage, setPendingImage] = useState<{ base64: string; mimeType: string } | null>(null);
   const attachMenuAnim = useRef(new Animated.Value(0)).current;
-  const recordingRef = useRef<AudioRecorder | null>(null);
+  const recordingRef = useRef<any>(null);
   const recognitionRef = useRef<any>(null);
   
   const scrollRef = useRef<ScrollView>(null);
@@ -119,7 +122,16 @@ export default function DriveLegalAssistant() {
     },
   ]);
   const chatHistoryRef = useRef<ChatMessage[]>(chatHistory);
-  const { data, isLoading, error, submitQuery } = useQuery();
+  const {
+    data,
+    streamingText,
+    isLoading,
+    error,
+    tier,
+    tinyModelStatus,
+    tinyDownloadProgress,
+    submitQuery,
+  } = useSmartChat();
 
   useEffect(() => {
     chatHistoryRef.current = chatHistory;
@@ -497,11 +509,11 @@ export default function DriveLegalAssistant() {
       }
 
       await setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+        allowsRecording: true,
+        playsInSilentMode: true,
       });
 
-      const recording = new AudioRecorder(RecordingPresets.HIGH_QUALITY);
+      const recording = new (AudioModule as any).AudioRecorder(RecordingPresets.HIGH_QUALITY);
       await recording.prepareToRecordAsync();
       recording.record();
       recordingRef.current = recording;
@@ -569,6 +581,12 @@ export default function DriveLegalAssistant() {
             </Text>
           </View>
 
+          <OfflineBanner
+            tier={tier}
+            tinyModelStatus={tinyModelStatus}
+            tinyDownloadProgress={tinyDownloadProgress}
+          />
+
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={toggleSidebar} style={styles.backButton}>
@@ -581,10 +599,7 @@ export default function DriveLegalAssistant() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">{t('assistant_name')}</Text>
-              <View style={styles.statusRow}>
-                <View style={styles.statusDot} />
-                <Text style={styles.statusText}>{t('assistant_status')}</Text>
-              </View>
+              <TierIndicator tier={tier} />
             </View>
           </View>
         </View>
@@ -649,11 +664,22 @@ export default function DriveLegalAssistant() {
             </View>
           ))}
           
-          {isLoading && (
+          {isLoading && streamingText ? (
+            <View style={[styles.messageWrapper, styles.aiWrapper]}>
+              <View style={styles.aiAvatar}>
+                <MaterialCommunityIcons name="auto-fix" size={14} color="#d97706" />
+              </View>
+              <View style={styles.bubbleContainer}>
+                <View style={[styles.messageBubble, styles.aiBubble]}>
+                  <MarkdownRenderer content={streamingText} isAI />
+                </View>
+              </View>
+            </View>
+          ) : isLoading ? (
             <View style={styles.loadingWrapper}>
               <ActivityIndicator size="small" color="#d97706" />
             </View>
-          )}
+          ) : null}
         </ScrollView>
 
         {/* Attachment Menu */}
@@ -724,7 +750,6 @@ export default function DriveLegalAssistant() {
               onSubmitEditing={() => handleSend()}
               selectionColor="#d97706"
               onFocus={() => isAttachMenuOpen && toggleAttachMenu()}
-              onPaste={handlePaste as any}
             />
             
             <TouchableOpacity style={styles.micButton} onPress={handleVoiceInput}>
@@ -1032,22 +1057,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#1c1c1c',
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10b981',
-    marginRight: 4,
-  },
-  statusText: {
-    fontSize: 11,
-    color: '#10b981',
-    fontWeight: '500',
   },
   translateButton: {
     padding: 4,

@@ -43,6 +43,12 @@
   force = true
 
 [[redirects]]
+  from = "/query/stream"
+  to = "https://13.222.36.11.nip.io/query/stream"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/transcribe"
   to = "https://13.222.36.11.nip.io/transcribe"
   status = 200

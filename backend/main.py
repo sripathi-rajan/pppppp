@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, Body, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime
 from pydantic import BaseModel, Field
@@ -248,6 +248,37 @@ async def handle_query(request: QueryRequest = Body(...)):
             "citations": [],
             "model": "Error"
         }
+
+
+@app.post("/query/stream")
+async def handle_query_stream(request: QueryRequest = Body(...)):
+    """
+    Streaming counterpart to /query for text-only queries: same classify → aggregate → judge
+    → synthesize pipeline, but the synthesizer's answer is sent as it's generated via SSE.
+    Image/vision queries aren't streamed — same restriction as the rest of this MVP; clients
+    should fall back to /query when an image is attached.
+    """
+    import json as _json
+
+    async def event_stream():
+        try:
+            async for kind, payload in multi_agent_bot.process_query_stream(request.text):
+                if kind == "delta":
+                    yield f"data: {_json.dumps({'type': 'delta', 'text': payload})}\n\n"
+                else:
+                    citations = [f"Source: {s}" for s in payload]
+                    yield f"data: {_json.dumps({'type': 'done', 'citations': citations})}\n\n"
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            yield f"data: {_json.dumps({'type': 'delta', 'text': f'Error running multi-agent: {e}'})}\n\n"
+            yield f"data: {_json.dumps({'type': 'done', 'citations': []})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 def _citations_from_tools(tools_used: list) -> list:

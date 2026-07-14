@@ -1426,7 +1426,7 @@ const styles = StyleSheet.create({
 
   // OCR Loader Overlay for license
   ocrLoaderOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(26,26,26,0.85)',
     borderRadius: 20,
     justifyContent: 'center',
