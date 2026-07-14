@@ -3,6 +3,8 @@ from typing import Dict, Any, List
 import json
 from openai import AsyncOpenAI
 
+from backend.multi_agent.history_utils import is_follow_up_question, history_transcript, message_needs_location
+
 from .query_classifier import QueryIntent
 from .config import config
 from .models import SourceAnswer
@@ -36,7 +38,7 @@ class SmartSynthesizer:
         )
         self.model_name = config.SYNTHESIZER_MODEL
     
-    async def synthesize(self, raw_evaluation, user_question, query_intent, all_sources, user_country="unknown", user_state="unknown"):
+    async def synthesize(self, raw_evaluation, user_question, query_intent, all_sources, user_country="unknown", user_state="unknown", conversation_history: List[Dict] = None, gps: Dict[str, float] = None):
         # Convert all_sources (list of SourceAnswer) into the dictionary format expected by the logic
         sources_data = {
             'db_answers': [s for s in all_sources if s.source.value == 'db'],
@@ -58,16 +60,16 @@ class SmartSynthesizer:
         
         if has_db and has_ollama:
             print("[SYNTHESIZER] Using full synthesis (DB + Ollama)")
-            final_answer = await self._synthesize_full(raw_evaluation, sources_data, user_question, query_intent, user_country, user_state)
+            final_answer = await self._synthesize_full(raw_evaluation, sources_data, user_question, query_intent, user_country, user_state, conversation_history, gps)
         elif has_google:
             print("[SYNTHESIZER] Using web-enhanced synthesis")
-            final_answer = await self._synthesize_from_web_enhanced(sources_data, user_question, query_intent, user_country, user_state)
+            final_answer = await self._synthesize_from_web_enhanced(sources_data, user_question, query_intent, user_country, user_state, conversation_history, gps)
         elif has_db:
             print("[SYNTHESIZER] Using DB-only expansion")
-            final_answer = await self._synthesize_db_expanded(sources_data, user_question, query_intent, user_country, user_state)
+            final_answer = await self._synthesize_db_expanded(sources_data, user_question, query_intent, user_country, user_state, conversation_history, gps)
         else:
             print("[SYNTHESIZER] Using fallback generation")
-            final_answer = await self._synthesize_fallback(user_question, query_intent, user_country, user_state)
+            final_answer = await self._synthesize_fallback(user_question, query_intent, user_country, user_state, conversation_history, gps)
             
         final_answer = self._ensure_formatting(final_answer, query_intent)
         
@@ -120,7 +122,19 @@ class SmartSynthesizer:
             for r in sources.get("google_answers", [])[:5]
         ])
 
-    def _build_full_prompt(self, sources, question, user_country, user_state) -> str:
+    def _enrich_question(self, question, history, gps, country, state):
+        enriched = question
+        if history and is_follow_up_question(question, history):
+            transcript = history_transcript(history)
+            enriched = f"Transcript context:\\n{transcript}\\n\\nCurrent question: {question}\\n(Note: if this question refers back to the prior topic, carry that context forward.)"
+        
+        if gps and message_needs_location(question):
+            enriched = f"{enriched}\\n(Note: the user is currently at GPS {gps['lat']}, {gps['lon']} which resolved to {state}, {country}. Frame your answer context around their location.)"
+            
+        return enriched
+
+    def _build_full_prompt(self, sources, question, user_country, user_state, history=None, gps=None) -> str:
+        question = self._enrich_question(question, history, gps, user_country, user_state)
         partial_info = ""
         for s in sources.get("db_answers", []):
             partial_info += str(s.answer) + "\n"
@@ -140,7 +154,8 @@ class SmartSynthesizer:
         - Use • bullets for itemized rules
         - Keep it structured and easy to read."""
 
-    def _build_web_enhanced_prompt(self, sources, question, user_country, user_state) -> str:
+    def _build_web_enhanced_prompt(self, sources, question, user_country, user_state, history=None, gps=None) -> str:
+        question = self._enrich_question(question, history, gps, user_country, user_state)
         google_text = self._google_text(sources)
         country_display = user_country.replace('_', ' ').title() if user_country != "unknown" else "international jurisdictions"
         if user_state and user_state != "unknown":
@@ -189,31 +204,33 @@ IMPORTANT FORMATTING RULES:
 
 Length: 700-1000 words"""
 
-    def _build_db_expanded_prompt(self, sources, question, user_country, user_state) -> str:
-        db_text = "\n".join([str(s.answer) for s in sources.get("db_answers", [])])
-        return f"USER ASKED: {question}\nDB DATA: {db_text}\nExpand this strictly based on DB facts."
+    def _build_db_expanded_prompt(self, sources, question, user_country, user_state, history=None, gps=None) -> str:
+        question = self._enrich_question(question, history, gps, user_country, user_state)
+        db_text = "\\n".join([str(s.answer) for s in sources.get("db_answers", [])])
+        return f"USER ASKED: {question}\\nDB DATA: {db_text}\\nExpand this strictly based on DB facts."
 
-    def _build_fallback_prompt(self, question, user_country, user_state) -> str:
+    def _build_fallback_prompt(self, question, user_country, user_state, history=None, gps=None) -> str:
+        question = self._enrich_question(question, history, gps, user_country, user_state)
         country_display = user_country.replace('_', ' ').title() if user_country != "unknown" else "general"
         if user_state and user_state != "unknown":
             country_display = f"{user_state}, {country_display}"
         return f"USER ASKED: {question}\nAnswer directly based on general knowledge of {country_display} traffic laws."
 
-    async def _synthesize_full(self, eval_result, sources, question, intent, user_country, user_state):
-        prompt = self._build_full_prompt(sources, question, user_country, user_state)
+    async def _synthesize_full(self, eval_result, sources, question, intent, user_country, user_state, history=None, gps=None):
+        prompt = self._build_full_prompt(sources, question, user_country, user_state, history, gps)
         return await self._call_local_llm(prompt, stream=False, user_country=user_country, user_state=user_state)
 
-    async def _synthesize_from_web_enhanced(self, sources, question, intent, user_country, user_state):
-        enhancement_prompt = self._build_web_enhanced_prompt(sources, question, user_country, user_state)
+    async def _synthesize_from_web_enhanced(self, sources, question, intent, user_country, user_state, history=None, gps=None):
+        enhancement_prompt = self._build_web_enhanced_prompt(sources, question, user_country, user_state, history, gps)
         answer = await self._call_local_llm(enhancement_prompt, stream=False, user_country=user_country, user_state=user_state)
         return answer if answer else self._google_text(sources)
 
-    async def _synthesize_db_expanded(self, sources, question, intent, user_country, user_state):
-        prompt = self._build_db_expanded_prompt(sources, question, user_country, user_state)
+    async def _synthesize_db_expanded(self, sources, question, intent, user_country, user_state, history=None, gps=None):
+        prompt = self._build_db_expanded_prompt(sources, question, user_country, user_state, history, gps)
         return await self._call_local_llm(prompt, stream=False, user_country=user_country, user_state=user_state)
 
-    async def _synthesize_fallback(self, question, intent, user_country, user_state):
-        prompt = self._build_fallback_prompt(question, user_country, user_state)
+    async def _synthesize_fallback(self, question, intent, user_country, user_state, history=None, gps=None):
+        prompt = self._build_fallback_prompt(question, user_country, user_state, history, gps)
         return await self._call_local_llm(prompt, stream=False, user_country=user_country, user_state=user_state)
 
     async def _call_local_llm(self, prompt: str, stream: bool = False, user_country: str = "unknown", user_state: str = "unknown"):
@@ -249,7 +266,7 @@ Length: 700-1000 words"""
             print(f"Error calling DeepSeek Synthesizer API: {e}")
             return "An error occurred while generating the guide."
 
-    async def synthesize_stream(self, raw_evaluation, user_question, query_intent, all_sources, user_country="unknown", user_state="unknown"):
+    async def synthesize_stream(self, raw_evaluation, user_question, query_intent, all_sources, user_country="unknown", user_state="unknown", conversation_history: List[Dict] = None, gps: Dict[str, float] = None):
         """Streaming counterpart to synthesize(): same branching logic to pick a prompt, but
         yields text deltas as they arrive instead of returning one final string.
 
@@ -268,13 +285,13 @@ Length: 700-1000 words"""
         has_google = len(sources_data.get('google_answers', [])) > 0
 
         if has_db and has_ollama:
-            prompt = self._build_full_prompt(sources_data, user_question, user_country, user_state)
+            prompt = self._build_full_prompt(sources_data, user_question, user_country, user_state, conversation_history, gps)
         elif has_google:
-            prompt = self._build_web_enhanced_prompt(sources_data, user_question, user_country, user_state)
+            prompt = self._build_web_enhanced_prompt(sources_data, user_question, user_country, user_state, conversation_history, gps)
         elif has_db:
-            prompt = self._build_db_expanded_prompt(sources_data, user_question, user_country, user_state)
+            prompt = self._build_db_expanded_prompt(sources_data, user_question, user_country, user_state, conversation_history, gps)
         else:
-            prompt = self._build_fallback_prompt(user_question, user_country, user_state)
+            prompt = self._build_fallback_prompt(user_question, user_country, user_state, conversation_history, gps)
 
         try:
             stream = await self._call_local_llm(prompt, stream=True, user_country=user_country, user_state=user_state)

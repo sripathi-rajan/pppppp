@@ -6,6 +6,7 @@ from openai import AsyncOpenAI
 from .models import SourceAnswer, SourceType
 from .config import config
 from .query_classifier import QueryClassifier, QueryIntent
+from backend.modules.agent.normalize import normalize_offence_code, normalize_state, normalize_vehicle_class
 
 class SourceAggregator:
     
@@ -19,13 +20,13 @@ class SourceAggregator:
             base_url=config.OLLAMA_BASE_URL
         )
     
-    async def fetch_all_sources(self, user_question: str) -> List[SourceAnswer]:
+    async def fetch_all_sources(self, user_question: str, user_state: str = None) -> List[SourceAnswer]:
         intent, metadata = self.classifier.classify(user_question)
         print(f"\n[INFO] Query Classified: {intent.value}")
         print(f"[INFO] Scope: {metadata['scope']}")
         
         tasks = [
-            self._fetch_from_db(user_question, intent, metadata),
+            self._fetch_from_db(user_question, intent, metadata, user_state),
             self._fetch_from_ollama(user_question, intent, metadata),
             self._fetch_from_google(user_question, intent, metadata)
         ]
@@ -41,7 +42,7 @@ class SourceAggregator:
                 
         return valid_results
     
-    async def _fetch_from_db(self, question: str, intent: QueryIntent, metadata: dict) -> SourceAnswer:
+    async def _fetch_from_db(self, question: str, intent: QueryIntent, metadata: dict, user_state: str = None) -> SourceAnswer:
         try:
             user_country = metadata.get("detected_country", "unknown")
             
@@ -72,7 +73,30 @@ class SourceAggregator:
                         db_results.append(f"Category {cat}: Refer to MV Act for {cat} rules.")
             else:
                 if self.fine_lookup:
-                    db_results.append(f"Found specific records for: {question} in Local DB.")
+                    norm_code = normalize_offence_code(question)
+                    if norm_code != "UNKNOWN":
+                        detected_state = metadata.get('detected_state', 'UNKNOWN')
+                        if detected_state == 'UNKNOWN' and user_state:
+                            detected_state = user_state
+                        
+                        norm_state = normalize_state(detected_state)
+                        if norm_state == "UNKNOWN":
+                            norm_state = "ALL"
+                            
+                        norm_veh = normalize_vehicle_class(question)
+                        repeat = "repeat" in question.lower() or "second time" in question.lower() or "again" in question.lower()
+                        
+                        fine_data = self.fine_lookup.query(norm_code, norm_veh, norm_state, repeat=repeat, country=user_country)
+                        if fine_data:
+                            amount_str = f"₹{fine_data.get('amount_inr')}" if fine_data.get('amount_inr') else "Court/Varied"
+                            section = fine_data.get('section_ref', 'N/A')
+                            res_str = f"Fine for {norm_code} in {norm_state}: {amount_str} (Section {section})."
+                            db_results.append(res_str)
+                            db_results.append(f"RAW_FINE_DATA: {json.dumps(fine_data)}")
+                        else:
+                            db_results.append(f"No specific DB records found for {norm_code} in {norm_state}.")
+                    else:
+                        db_results.append(f"Could not classify offence for: {question}")
             
             answer_text = "\n".join(db_results) if db_results else "No specific DB records found."
             
