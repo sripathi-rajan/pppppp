@@ -31,7 +31,7 @@ export interface StreamCallbacks {
 export async function streamCloud(
   text: string,
   history: ChatHistoryTurn[],
-  opts: { userVehicle?: string; userLocation?: string; signal?: AbortSignal },
+  opts: { userVehicle?: string; userLocation?: string; country?: string; state?: string; signal?: AbortSignal },
   callbacks: StreamCallbacks
 ): Promise<void> {
   const BASE_URL = getApiBaseUrl();
@@ -46,6 +46,8 @@ export async function streamCloud(
       gps,
       vehicle: opts.userVehicle,
       location_name: opts.userLocation,
+      country: opts.country,
+      state: opts.state,
     }),
     signal: opts.signal,
   });
@@ -92,6 +94,8 @@ export async function queryCloudOnce(
   attachment: { imageBase64?: string; imageMime?: string } = {},
   userVehicle?: string,
   userLocation?: string,
+  country?: string,
+  state?: string,
   signal?: AbortSignal
 ): Promise<QueryResult> {
   const BASE_URL = getApiBaseUrl();
@@ -111,6 +115,8 @@ export async function queryCloudOnce(
       location_name: userLocation,
       image_base64: attachment.imageBase64,
       image_mime: attachment.imageMime,
+      country,
+      state,
     }),
     signal,
   });

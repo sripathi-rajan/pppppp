@@ -31,7 +31,9 @@ interface UseSmartChatResult {
     history?: ChatHistoryTurn[],
     attachment?: { imageBase64?: string; imageMime?: string },
     userVehicle?: string,
-    userLocation?: string
+    userLocation?: string,
+    country?: string,
+    state?: string
   ) => Promise<void>;
 }
 
@@ -90,7 +92,9 @@ export function useSmartChat(): UseSmartChatResult {
       history: ChatHistoryTurn[] = [],
       attachment: { imageBase64?: string; imageMime?: string } = {},
       userVehicle?: string,
-      userLocation?: string
+      userLocation?: string,
+      country?: string,
+      state?: string
     ) => {
       setIsLoading(true);
       setError(null);
@@ -103,7 +107,7 @@ export function useSmartChat(): UseSmartChatResult {
       if (attachment.imageBase64) {
         setTier('cloud');
         try {
-          const result = await queryCloudOnce(text, history, attachment, userVehicle, userLocation);
+          const result = await queryCloudOnce(text, history, attachment, userVehicle, userLocation, country, state);
           setData(result);
         } catch (err: any) {
           console.log('Vision query failed:', err);
@@ -125,7 +129,7 @@ export function useSmartChat(): UseSmartChatResult {
               await streamCloud(
                 text,
                 history,
-                { userVehicle, userLocation },
+                { userVehicle, userLocation, country, state },
                 {
                   onDelta: (delta) => {
                     full += delta;
@@ -155,7 +159,7 @@ export function useSmartChat(): UseSmartChatResult {
         // Native: unchanged /query call, but a friendly message instead of a raw error on failure.
         setTier('cloud');
         try {
-          const result = await queryCloudOnce(text, history, {}, userVehicle, userLocation);
+          const result = await queryCloudOnce(text, history, {}, userVehicle, userLocation, country, state);
           setData(result);
         } catch (err) {
           console.log('Native cloud query failed:', err);

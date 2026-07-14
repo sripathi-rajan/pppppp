@@ -115,6 +115,8 @@ class QueryRequest(BaseModel):
     location_name: Optional[str] = None
     image_base64: Optional[str] = None
     image_mime: Optional[str] = "image/jpeg"
+    country: Optional[str] = None
+    state: Optional[str] = None
     # Conversation history for multi-turn context
     # Each entry: {"role": "user"|"model", "parts": ["message text"]}
     history: List[Dict] = Field(default_factory=list)
@@ -231,7 +233,11 @@ async def handle_query(request: QueryRequest = Body(...)):
             return vision_result
             
         # Otherwise, run the new Multi-Agent text pipeline
-        result = await multi_agent_bot.process_query(request.text)
+        result = await multi_agent_bot.process_query(
+            request.text,
+            user_profile_country=request.country,
+            user_profile_state=request.state
+        )
         
         # Map to the format expected by the frontend
         return {
@@ -262,7 +268,11 @@ async def handle_query_stream(request: QueryRequest = Body(...)):
 
     async def event_stream():
         try:
-            async for kind, payload in multi_agent_bot.process_query_stream(request.text):
+            async for kind, payload in multi_agent_bot.process_query_stream(
+                request.text,
+                user_profile_country=request.country,
+                user_profile_state=request.state
+            ):
                 if kind == "delta":
                     yield f"data: {_json.dumps({'type': 'delta', 'text': payload})}\n\n"
                 else:

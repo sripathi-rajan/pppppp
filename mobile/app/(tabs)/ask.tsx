@@ -265,7 +265,9 @@ export default function DriveLegalAssistant() {
         ? { imageBase64: imageForApi.base64, imageMime: imageForApi.mimeType }
         : undefined,
       primaryVehicleType,
-      currentLocation
+      currentLocation,
+      profile.country,
+      profile.state
     );
   };
 

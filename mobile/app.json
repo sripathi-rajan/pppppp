@@ -6,14 +6,12 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#FBF7F0"
     },
     "updates": {
-      "url": "https://u.expo.dev/7cd91a27-1ba3-41a0-bf6a-d2a59eb7a131",
       "enabled": true,
       "fallbackToCacheTimeout": 0
     },
@@ -30,7 +28,7 @@
         "root": "./app"
       },
       "eas": {
-        "projectId": "7cd91a27-1ba3-41a0-bf6a-d2a59eb7a131"
+        "projectId": "985ec079-a085-44a6-a262-b61c7d293f9b"
       }
     },
     "android": {
@@ -78,7 +76,6 @@
       "expo-image-picker",
       "expo-splash-screen"
     ],
-    "scheme": "drivelegal",
-    "owner": "ishwarya19"
+    "scheme": "drivelegal"
   }
 }

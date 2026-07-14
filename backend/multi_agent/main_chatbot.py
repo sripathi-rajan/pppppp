@@ -28,7 +28,7 @@ class TrafficPolicyChatbot:
         print("   - Scope-aware judging: ENABLED")
         print("   - Smart confidence handling: ENABLED")
     
-    async def process_query(self, user_question: str) -> Dict[str, Any]:
+    async def process_query(self, user_question: str, user_profile_country: str = None, user_profile_state: str = None) -> Dict[str, Any]:
         print(f"\n{'='*60}")
         print(f"PROCESSING: {user_question[:60]}...")
         print(f"{'='*60}")
@@ -80,12 +80,20 @@ class TrafficPolicyChatbot:
         
         detected_country = intent_info.get("detected_country", "unknown")
         
+        # If NLP didn't detect a country, fallback to user's profile country if provided
+        final_country = detected_country
+        if final_country == "unknown" and user_profile_country:
+            final_country = user_profile_country.lower().replace(" ", "_")
+            
+        final_state = user_profile_state or "unknown"
+        
         final_output = await self.synthesizer.synthesize(
             raw_evaluation=judge_result,
             user_question=user_question,
             query_intent=intent,
             all_sources=sources,
-            user_country=detected_country
+            user_country=final_country,
+            user_state=final_state
         )
         
         final_answer = final_output["answer"]
@@ -121,7 +129,7 @@ class TrafficPolicyChatbot:
             )
         return await self.aggregator.fetch_all_sources(question)
 
-    async def process_query_stream(self, user_question: str):
+    async def process_query_stream(self, user_question: str, user_profile_country: str = None, user_profile_state: str = None):
         """Streaming counterpart to process_query(): runs the same classify → aggregate →
         judge pipeline (not streamed — same latency as today), then yields the synthesizer's
         answer as it's generated instead of returning one final string.
@@ -162,13 +170,20 @@ class TrafficPolicyChatbot:
             sources = await self._retry_with_corrected_scope(user_question, intent, judge_result)
 
         detected_country = intent_info.get("detected_country", "unknown")
+        
+        final_country = detected_country
+        if final_country == "unknown" and user_profile_country:
+            final_country = user_profile_country.lower().replace(" ", "_")
+            
+        final_state = user_profile_state or "unknown"
 
         async for chunk in self.synthesizer.synthesize_stream(
             raw_evaluation=judge_result,
             user_question=user_question,
             query_intent=intent,
             all_sources=sources,
-            user_country=detected_country
+            user_country=final_country,
+            user_state=final_state
         ):
             yield ("delta", chunk)
 
