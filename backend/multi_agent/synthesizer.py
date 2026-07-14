@@ -7,6 +7,26 @@ from .query_classifier import QueryIntent
 from .config import config
 from .models import SourceAnswer
 
+COUNTRY_PROMPTS = {
+    "india": "You are an expert Indian Traffic Police assistant.",
+    "saudi_arabia": "You are an expert Saudi Arabian traffic law advisor. Cite Moroor (General Directorate of Traffic) regulations where applicable.",
+    "uae": "You are an expert UAE traffic law advisor.",
+    "uk": "You are an expert UK traffic law advisor.",
+    "usa": "You are an expert US traffic law advisor.",
+    "singapore": "You are an expert Singapore traffic law advisor.",
+    "unknown": "You are an expert international traffic law advisor."
+}
+
+COUNTRY_FOOTERS = {
+    "india": "\n---\n💡 For complete details: parivahan.gov.in | mParivahan app | Local RTO",
+    "saudi_arabia": "\n---\n💡 For complete details: moroor.gov.sa | Absher portal",
+    "uae": "\n---\n💡 For complete details: moi.gov.ae | Dubai Police app",
+    "uk": "\n---\n💡 For complete details: gov.uk/browse/driving",
+    "usa": "\n---\n💡 For complete details: Local DMV website",
+    "singapore": "\n---\n💡 For complete details: police.gov.sg/advisories/traffic",
+    "unknown": ""
+}
+
 class SmartSynthesizer:
     
     def __init__(self):
@@ -16,7 +36,7 @@ class SmartSynthesizer:
         )
         self.model_name = config.SYNTHESIZER_MODEL
     
-    async def synthesize(self, raw_evaluation, user_question, query_intent, all_sources):
+    async def synthesize(self, raw_evaluation, user_question, query_intent, all_sources, user_country="unknown"):
         # Convert all_sources (list of SourceAnswer) into the dictionary format expected by the logic
         sources_data = {
             'db_answers': [s for s in all_sources if s.source.value == 'db'],
@@ -38,16 +58,16 @@ class SmartSynthesizer:
         
         if has_db and has_ollama:
             print("[SYNTHESIZER] Using full synthesis (DB + Ollama)")
-            final_answer = await self._synthesize_full(raw_evaluation, sources_data, user_question, query_intent)
+            final_answer = await self._synthesize_full(raw_evaluation, sources_data, user_question, query_intent, user_country)
         elif has_google:
             print("[SYNTHESIZER] Using web-enhanced synthesis")
-            final_answer = await self._synthesize_from_web_enhanced(sources_data, user_question, query_intent)
+            final_answer = await self._synthesize_from_web_enhanced(sources_data, user_question, query_intent, user_country)
         elif has_db:
             print("[SYNTHESIZER] Using DB-only expansion")
-            final_answer = await self._synthesize_db_expanded(sources_data, user_question, query_intent)
+            final_answer = await self._synthesize_db_expanded(sources_data, user_question, query_intent, user_country)
         else:
             print("[SYNTHESIZER] Using fallback generation")
-            final_answer = await self._synthesize_fallback(user_question, query_intent)
+            final_answer = await self._synthesize_fallback(user_question, query_intent, user_country)
             
         final_answer = self._ensure_formatting(final_answer, query_intent)
         
@@ -62,7 +82,8 @@ class SmartSynthesizer:
                 final_answer += f"• {u}\n"
         
         if not final_answer.endswith('!'):
-            final_answer += "\n\n---\n💡 For complete details: parivahan.gov.in | mParivahan app | Local RTO\n🛡️ Drive safely! Your family wants you home alive."
+            footer = COUNTRY_FOOTERS.get(user_country, COUNTRY_FOOTERS["unknown"])
+            final_answer += f"{footer}\n🛡️ Drive safely! Your family wants you home alive."
             
         return {
             "answer": final_answer,
@@ -96,7 +117,7 @@ class SmartSynthesizer:
             for r in sources.get("google_answers", [])[:5]
         ])
 
-    def _build_full_prompt(self, sources, question) -> str:
+    def _build_full_prompt(self, sources, question, user_country) -> str:
         partial_info = ""
         for s in sources.get("db_answers", []):
             partial_info += str(s.answer) + "\n"
@@ -116,9 +137,10 @@ class SmartSynthesizer:
         - Use • bullets for itemized rules
         - Keep it structured and easy to read."""
 
-    def _build_web_enhanced_prompt(self, sources, question) -> str:
+    def _build_web_enhanced_prompt(self, sources, question, user_country) -> str:
         google_text = self._google_text(sources)
-        return f"""You are a traffic law educator for India.
+        country_display = user_country.replace('_', ' ').title() if user_country != "unknown" else "international jurisdictions"
+        return f"""You are a traffic law educator for {country_display}.
 
 USER ASKED: "{question}"
 
@@ -162,38 +184,40 @@ IMPORTANT FORMATTING RULES:
 
 Length: 700-1000 words"""
 
-    def _build_db_expanded_prompt(self, sources, question) -> str:
+    def _build_db_expanded_prompt(self, sources, question, user_country) -> str:
         db_text = "\n".join([str(s.answer) for s in sources.get("db_answers", [])])
         return f"USER ASKED: {question}\nDB DATA: {db_text}\nExpand this strictly based on DB facts."
 
-    def _build_fallback_prompt(self, question) -> str:
-        return f"USER ASKED: {question}\nAnswer directly based on general knowledge of Indian traffic laws."
+    def _build_fallback_prompt(self, question, user_country) -> str:
+        country_display = user_country.replace('_', ' ').title() if user_country != "unknown" else "general"
+        return f"USER ASKED: {question}\nAnswer directly based on general knowledge of {country_display} traffic laws."
 
-    async def _synthesize_full(self, eval_result, sources, question, intent):
-        prompt = self._build_full_prompt(sources, question)
-        return await self._call_local_llm(prompt)
+    async def _synthesize_full(self, eval_result, sources, question, intent, user_country):
+        prompt = self._build_full_prompt(sources, question, user_country)
+        return await self._call_local_llm(prompt, stream=False, user_country=user_country)
 
-    async def _synthesize_from_web_enhanced(self, sources, question, intent):
-        enhancement_prompt = self._build_web_enhanced_prompt(sources, question)
-        answer = await self._call_local_llm(enhancement_prompt)
+    async def _synthesize_from_web_enhanced(self, sources, question, intent, user_country):
+        enhancement_prompt = self._build_web_enhanced_prompt(sources, question, user_country)
+        answer = await self._call_local_llm(enhancement_prompt, stream=False, user_country=user_country)
         return answer if answer else self._google_text(sources)
 
-    async def _synthesize_db_expanded(self, sources, question, intent):
-        prompt = self._build_db_expanded_prompt(sources, question)
-        return await self._call_local_llm(prompt)
+    async def _synthesize_db_expanded(self, sources, question, intent, user_country):
+        prompt = self._build_db_expanded_prompt(sources, question, user_country)
+        return await self._call_local_llm(prompt, stream=False, user_country=user_country)
 
-    async def _synthesize_fallback(self, question, intent):
-        prompt = self._build_fallback_prompt(question)
-        return await self._call_local_llm(prompt)
+    async def _synthesize_fallback(self, question, intent, user_country):
+        prompt = self._build_fallback_prompt(question, user_country)
+        return await self._call_local_llm(prompt, stream=False, user_country=user_country)
 
-    async def _call_local_llm(self, prompt: str, stream: bool = False):
+    async def _call_local_llm(self, prompt: str, stream: bool = False, user_country: str = "unknown"):
         """When stream=True, returns the raw async completion-chunk iterator instead of
         awaiting the full text — caller is responsible for consuming and error handling."""
+        system_prompt = COUNTRY_PROMPTS.get(user_country, COUNTRY_PROMPTS["unknown"])
         if stream:
             return await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are an expert Indian Traffic Police assistant."},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.4,
@@ -204,7 +228,7 @@ Length: 700-1000 words"""
             response = await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are an expert Indian Traffic Police assistant."},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.4,
@@ -215,7 +239,7 @@ Length: 700-1000 words"""
             print(f"Error calling DeepSeek Synthesizer API: {e}")
             return "An error occurred while generating the guide."
 
-    async def synthesize_stream(self, raw_evaluation, user_question, query_intent, all_sources):
+    async def synthesize_stream(self, raw_evaluation, user_question, query_intent, all_sources, user_country="unknown"):
         """Streaming counterpart to synthesize(): same branching logic to pick a prompt, but
         yields text deltas as they arrive instead of returning one final string.
 
@@ -234,16 +258,16 @@ Length: 700-1000 words"""
         has_google = len(sources_data.get('google_answers', [])) > 0
 
         if has_db and has_ollama:
-            prompt = self._build_full_prompt(sources_data, user_question)
+            prompt = self._build_full_prompt(sources_data, user_question, user_country)
         elif has_google:
-            prompt = self._build_web_enhanced_prompt(sources_data, user_question)
+            prompt = self._build_web_enhanced_prompt(sources_data, user_question, user_country)
         elif has_db:
-            prompt = self._build_db_expanded_prompt(sources_data, user_question)
+            prompt = self._build_db_expanded_prompt(sources_data, user_question, user_country)
         else:
-            prompt = self._build_fallback_prompt(user_question)
+            prompt = self._build_fallback_prompt(user_question, user_country)
 
         try:
-            stream = await self._call_local_llm(prompt, stream=True)
+            stream = await self._call_local_llm(prompt, stream=True, user_country=user_country)
             async for chunk in stream:
                 delta = chunk.choices[0].delta.content if chunk.choices else None
                 if delta:
@@ -263,7 +287,8 @@ Length: 700-1000 words"""
             trailing += "\n\n**References:**\n"
             for u in urls:
                 trailing += f"• {u}\n"
-        trailing += "\n\n---\n💡 For complete details: parivahan.gov.in | mParivahan app | Local RTO\n🛡️ Drive safely! Your family wants you home alive."
+        footer = COUNTRY_FOOTERS.get(user_country, COUNTRY_FOOTERS["unknown"])
+        trailing += f"{footer}\n🛡️ Drive safely! Your family wants you home alive."
         yield trailing
             
     def _ensure_formatting(self, answer, intent):

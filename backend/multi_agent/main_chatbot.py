@@ -78,11 +78,14 @@ class TrafficPolicyChatbot:
                 user_question, intent, judge_result
             )
         
+        detected_country = intent_info.get("detected_country", "unknown")
+        
         final_output = await self.synthesizer.synthesize(
             raw_evaluation=judge_result,
             user_question=user_question,
             query_intent=intent,
-            all_sources=sources
+            all_sources=sources,
+            user_country=detected_country
         )
         
         final_answer = final_output["answer"]
@@ -158,11 +161,14 @@ class TrafficPolicyChatbot:
         if judge_result.get("fatal_flaw_detected"):
             sources = await self._retry_with_corrected_scope(user_question, intent, judge_result)
 
+        detected_country = intent_info.get("detected_country", "unknown")
+
         async for chunk in self.synthesizer.synthesize_stream(
             raw_evaluation=judge_result,
             user_question=user_question,
             query_intent=intent,
-            all_sources=sources
+            all_sources=sources,
+            user_country=detected_country
         ):
             yield ("delta", chunk)
 

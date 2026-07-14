@@ -35,6 +35,15 @@ class EnhancedQueryClassifier:
         ("right_of_way", ["right of way", "yield", "give way", "priority"])
     ]
     
+    SUPPORTED_COUNTRIES = {
+        "india": ["india", "tamil nadu", "delhi", "mumbai", "bangalore", "chennai", "pune", "kerala", "karnataka", "maharashtra"],
+        "saudi_arabia": ["saudi", "saudi arabia", "ksa", "riyadh", "jeddah", "moroor"],
+        "uae": ["uae", "dubai", "abu dhabi", "emirates", "sharjah"],
+        "uk": ["uk", "britain", "london", "england", "united kingdom"],
+        "usa": ["usa", "america", "united states", "california", "texas", "new york"],
+        "singapore": ["singapore", "sg"]
+    }
+    
     def classify(self, user_question: str) -> Dict[str, any]:
         """
         Classify query with better edge case handling
@@ -74,12 +83,16 @@ class EnhancedQueryClassifier:
             categories = self.RULE_CATEGORIES[:6]  # Default top 6
             fetch_strategy = "multi_topic"
         
+        # Extract Country Jurisdiction
+        detected_country = self._extract_country(question_lower)
+        
         return {
             "intent_type": intent_type,
             "categories": categories,
             "fetch_strategy": fetch_strategy,
             "keyword_scores": {"broad": broad_score, "specific": specific_score},
             "confidence": self._calculate_confidence(broad_score, specific_score, len(question_lower)),
+            "detected_country": detected_country,
             "_should_respond": True
         }
     
@@ -89,6 +102,13 @@ class EnhancedQueryClassifier:
             if re.match(pattern, text.strip()):
                 return True
         return False
+    
+    def _extract_country(self, text: str) -> str:
+        """Extract requested country/jurisdiction"""
+        for country, keywords in self.SUPPORTED_COUNTRIES.items():
+            if any(kw in text for kw in keywords):
+                return country
+        return "unknown"
     
     def _extract_categories(self, question: str) -> List[str]:
         """Extract relevant categories"""

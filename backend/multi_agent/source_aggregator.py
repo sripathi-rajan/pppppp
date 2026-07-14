@@ -43,6 +43,18 @@ class SourceAggregator:
     
     async def _fetch_from_db(self, question: str, intent: QueryIntent, metadata: dict) -> SourceAnswer:
         try:
+            user_country = metadata.get("detected_country", "unknown")
+            
+            # If DB only has India data and user asked about another country,
+            # return empty/low-confidence result so web search takes over
+            if user_country not in ("india", "unknown"):
+                return SourceAnswer(
+                    source=SourceType.DB,
+                    answer=f"No local database entries for {user_country}.",
+                    confidence=0.0,
+                    metadata={"jurisdiction_mismatch": True, "requested_country": user_country}
+                )
+            
             db_results = []
             
             if not self.fine_lookup and not self.rules_loader:
