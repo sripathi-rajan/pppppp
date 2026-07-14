@@ -12,7 +12,7 @@
 
 <br />
 
-**DriveLegal** is an AI-powered mobile + web application that simplifies traffic laws, regulations, and fine management across **six countries** (India, UAE, UK, USA, Singapore, Saudi Arabia). It uses an **agentic AI architecture** — a local LLM autonomously decides which tools to call, executes them against real databases, and synthesizes grounded natural-language responses.
+**DriveLegal** is an AI-powered mobile + web application that simplifies traffic laws, regulations, and fine management across **six countries** (India, UAE, UK, USA, Singapore, Saudi Arabia). It uses an **agentic AI architecture** — a local LLM ([Ollama](https://ollama.com/)) autonomously decides which tools to call, executes them against real databases, and synthesizes grounded natural-language responses.
 
 ---
 
@@ -60,7 +60,7 @@
 
 | Feature | Description |
 |---|---|
-| **Agentic AI** | Local Ollama (with Gemini cloud fallback) autonomously decides which tools to call — fine lookup, rule search, zone check, web search — and synthesizes grounded responses |
+| **Agentic AI** | Local [Ollama](https://ollama.com/) (with [Gemini](https://ai.google.dev/) cloud fallback) autonomously decides which tools to call — fine lookup, rule search, zone check, web search — and synthesizes grounded responses |
 | **Tool Calling** | 5 integrated tools (`lookup_fine`, `lookup_rule`, `check_zone`, `search_rules`, `search_web`) backed by SQLite, JSON data, and live web scraping |
 | **Multi-turn Memory** | Full conversation history passed to the agent for context-aware follow-up queries |
 | **Multi-Country** | Traffic law data for India (16 states), UAE, UK, USA, Singapore, and Saudi Arabia |
@@ -69,7 +69,7 @@
 | **Image Analysis** | Upload challan photos / traffic signs for AI-powered extraction + database cross-verification |
 | **Voice Integration** | Hands-free voice-to-text search for safe driving |
 | **Offline-First** | Local SQLite database on-device for instant rule/fine access without internet |
-| **Hybrid Search (RAG)** | ChromaDB vector search + BM25 lexical search for intelligent fallback |
+| **Hybrid Search (RAG)** | [ChromaDB](https://www.trychroma.com/) vector search + BM25 lexical search for intelligent fallback |
 | **Multi-Language** | UI in English, Tamil, Hindi, and Telugu |
 | **Premium UI** | Clean, high-performance interface with dark amber accent theme |
 
@@ -159,32 +159,32 @@ Final structured response returned to mobile app
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| Framework | **FastAPI** | Async REST API server |
-| AI (Primary) | **Ollama** (via OpenAI SDK) | Local LLM for agentic tool calling |
-| AI (Fallback) | **Google Gemini** (google-genai SDK) | Cloud LLM fallback |
-| NLP / RAG | **ChromaDB** + **BM25Okapi** | Hybrid vector+lexical search |
-| Embeddings | **Ollama** (nomic-embed-text) | Local embedding generation |
-| Geofencing | **Shapely** | GeoJSON polygon point-in-polygon checks |
-| Fines DB | **SQLite** | Structured traffic fine storage |
+| Framework | **[FastAPI](https://fastapi.tiangolo.com/)** | Async REST API server |
+| AI (Primary) | **[Ollama](https://ollama.com/)** (via [OpenAI SDK](https://platform.openai.com/docs)) | Local LLM for agentic tool calling |
+| AI (Fallback) | **[Google Gemini](https://ai.google.dev/)** (google-genai SDK) | Cloud LLM fallback |
+| NLP / RAG | **[ChromaDB](https://www.trychroma.com/)** + **BM25Okapi** | Hybrid vector+lexical search |
+| Embeddings | **[Ollama](https://ollama.com/)** ([nomic-embed-text](https://ollama.com/library/nomic-embed-text)) | Local embedding generation |
+| Geofencing | **[Shapely](https://shapely.readthedocs.io/)** | GeoJSON polygon point-in-polygon checks |
+| Fines DB | **[SQLite](https://www.sqlite.org/)** | Structured traffic fine storage |
 | Rules DB | **JSON** | Motor Vehicles Act rules + state overrides |
-| Scraping | **Playwright** | Automated government website scraping |
-| Server | **Uvicorn** | ASGI server |
-| Validation | **Pydantic** | Request/response model validation |
+| Scraping | **[Playwright](https://playwright.dev/)** | Automated government website scraping |
+| Server | **[Uvicorn](https://www.uvicorn.org/)** | ASGI server |
+| Validation | **[Pydantic](https://docs.pydantic.dev/)** | Request/response model validation |
 
 ### Mobile (Frontend)
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| Framework | **Expo 54** / **React Native 0.81** | Cross-platform mobile app |
-| Language | **TypeScript 5.3+** | Type-safe development |
-| Navigation | **Expo Router v3** | File-based routing |
-| Data Fetching | **TanStack Query 5** | Server state management |
-| Maps | **MapLibre React Native** | Interactive maps |
-| Local Storage | **Expo SQLite** | Offline rule/fine cache |
-| Settings | **Async Storage** | User preferences persistence |
-| Location | **Expo Location** | GPS for geofencing |
-| Camera | **Expo Image Picker** | Challan/document photo capture |
-| UI Icons | **@expo/vector-icons** (Ionicons) | Tab bar and UI icons |
+| Framework | **[Expo 54](https://expo.dev/)** / **[React Native 0.81](https://reactnative.dev/)** | Cross-platform mobile app |
+| Language | **[TypeScript 5.3+](https://www.typescriptlang.org/)** | Type-safe development |
+| Navigation | **[Expo Router v3](https://docs.expo.dev/router/introduction/)** | File-based routing |
+| Data Fetching | **[TanStack Query 5](https://tanstack.com/query)** | Server state management |
+| Maps | **[MapLibre React Native](https://maplibre.org/)** | Interactive maps |
+| Local Storage | **[Expo SQLite](https://docs.expo.dev/versions/latest/sdk/sqlite/)** | Offline rule/fine cache |
+| Settings | **[Async Storage](https://react-native-async-storage.github.io/async-storage/)** | User preferences persistence |
+| Location | **[Expo Location](https://docs.expo.dev/versions/latest/sdk/location/)** | GPS for geofencing |
+| Camera | **[Expo Image Picker](https://docs.expo.dev/versions/latest/sdk/imagepicker/)** | Challan/document photo capture |
+| UI Icons | **[@expo/vector-icons](https://icons.expo.fyi/)** (Ionicons) | Tab bar and UI icons |
 
 ---
 
