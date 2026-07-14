@@ -1,4 +1,5 @@
 import re
+import asyncio
 from typing import Dict, Any, List
 import json
 from openai import AsyncOpenAI
@@ -28,6 +29,11 @@ COUNTRY_FOOTERS = {
     "singapore": "\n---\n💡 For complete details: police.gov.sg/advisories/traffic",
     "unknown": ""
 }
+
+# Transient DeepSeek hiccups (timeouts, rate limits, momentary 5xx) shouldn't surface as
+# "An error occurred" on the first try — retry once before giving up.
+_DEEPSEEK_ATTEMPTS = 2
+_DEEPSEEK_RETRY_DELAY_SECONDS = 1.0
 
 class SmartSynthesizer:
     
@@ -233,6 +239,29 @@ Length: 700-1000 words"""
         prompt = self._build_fallback_prompt(question, user_country, user_state, history, gps)
         return await self._call_local_llm(prompt, stream=False, user_country=user_country, user_state=user_state)
 
+    async def _create_completion(self, system_prompt: str, prompt: str, stream: bool):
+        """Calls DeepSeek with one retry on transient failures (timeouts, rate limits,
+        momentary 5xx) before giving up. Raises the last error if every attempt fails."""
+        last_err: Exception | None = None
+        for attempt in range(_DEEPSEEK_ATTEMPTS):
+            try:
+                return await self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.4,
+                    max_tokens=2048,
+                    stream=stream,
+                )
+            except Exception as e:
+                last_err = e
+                print(f"DeepSeek API call failed (attempt {attempt + 1}/{_DEEPSEEK_ATTEMPTS}): {e}")
+                if attempt + 1 < _DEEPSEEK_ATTEMPTS:
+                    await asyncio.sleep(_DEEPSEEK_RETRY_DELAY_SECONDS)
+        raise last_err if last_err is not None else RuntimeError("DeepSeek call failed with no exception captured")
+
     async def _call_local_llm(self, prompt: str, stream: bool = False, user_country: str = "unknown", user_state: str = "unknown"):
         """When stream=True, returns the raw async completion-chunk iterator instead of
         awaiting the full text — caller is responsible for consuming and error handling."""
@@ -241,26 +270,9 @@ Length: 700-1000 words"""
             system_prompt = system_prompt.replace("assistant.", f"assistant for {user_state}.")
             system_prompt = system_prompt.replace("advisor.", f"advisor for {user_state}.")
         if stream:
-            return await self.client.chat.completions.create(
-                model=self.model_name,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.4,
-                max_tokens=2048,
-                stream=True,
-            )
+            return await self._create_completion(system_prompt, prompt, stream=True)
         try:
-            response = await self.client.chat.completions.create(
-                model=self.model_name,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.4,
-                max_tokens=2048
-            )
+            response = await self._create_completion(system_prompt, prompt, stream=False)
             return response.choices[0].message.content
         except Exception as e:
             print(f"Error calling DeepSeek Synthesizer API: {e}")
